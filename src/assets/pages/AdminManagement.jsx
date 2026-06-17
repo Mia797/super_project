@@ -12,12 +12,25 @@ import {
   updateEquipment,
   deleteEquipment,
   createSpecialist,
+  updateAuthUser,
+  getUserDetail,
   deleteTrainer,
   deleteNutritionist,
   deleteUser
 } from '../../api/adminApi';
 import { createSubscriptionPlan } from '../../api/subscriptionApi';
 import { toast } from 'react-toastify';
+
+const parseUsersList = (result) => {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.users)) return result.users;
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.data?.users)) return result.data.users;
+  return Object.values(result || {}).filter((v) => typeof v === 'object' && v?.id);
+};
+
+const resolveSpecialistUserId = (spec) =>
+  Number(spec?.user_id ?? spec?.userId ?? spec?.id);
 
 function AdminManagement() {
   const { user } = useAuth();
@@ -36,7 +49,11 @@ function AdminManagement() {
   const [equipmentForm, setEquipmentForm] = useState({ name: '', description: '', status: 'available', booking_price: '25' });
   const [subForm, setSubForm] = useState({ name: '', price: '', duration_days: '30', description: '', has_trainer: false, has_nutritionist: false, plan_type: 'both' });
   const [editingSub, setEditingSub] = useState(null);
-  const [specForm, setSpecForm] = useState({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+  const emptySpecForm = {
+    name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '',
+    address: '', age: '', gender: 'male'
+  };
+  const [specForm, setSpecForm] = useState(emptySpecForm);
   const [editingSpec, setEditingSpec] = useState(null); // Added state to track currently edited specialist
   const [deleteUserId, setDeleteUserId] = useState('');
   const [users, setUsers] = useState([]);
@@ -77,10 +94,10 @@ function AdminManagement() {
     try {
       const trainersRes = await axios.get('/api/trainers');
       const nutritionistsRes = await axios.get('/api/nutritionists');
-     
-      const trainersList = (trainersRes.data?.trainers || []).map(t => ({ ...t, role: 'trainer' }));
-      const nutritionistsList = (nutritionistsRes.data?.nutritionists || []).map(n => ({ ...n, role: 'nutritionist' }));
-     
+
+      const trainersList = (trainersRes.data?.trainers || []).map((t) => ({ ...t, role: 'trainer' }));
+      const nutritionistsList = (nutritionistsRes.data?.nutritionists || []).map((n) => ({ ...n, role: 'nutritionist' }));
+
       setSpecialists([...trainersList, ...nutritionistsList]);
     } catch (e) {
       console.error(e);
@@ -94,15 +111,7 @@ function AdminManagement() {
     setLoading(true);
     try {
       const res = await axios.get('/api/users');
-      const result = res.data;
-
-      const safeUsers = Array.isArray(result)
-        ? result
-        : Object.values(result || {}).filter(v => typeof v === 'object' && v?.id);
-
-      console.log("SAFE USERS:", safeUsers);
-
-      setUsers(safeUsers);
+      setUsers(parseUsersList(res.data));
     } catch (e) {
       toast.error('Failed to fetch users');
       setUsers([]);
@@ -254,34 +263,40 @@ function AdminManagement() {
 
   const handleAddSpec = async (e) => {
     e.preventDefault();
-    if (!specForm.name.trim() || !specForm.email.trim() || (!editingSpec && !specForm.password.trim())) return;
+    if (!specForm.name.trim()) return;
+    if (!editingSpec && (!specForm.email.trim() || !specForm.password.trim())) return;
    
     try {
       if (editingSpec) {
-        if (specForm.role_name === 'trainer') {
-          // Triggers the requested functionality
-          const payload = {
-            id: editingSpec.id,
-            name: specForm.name,
-            email: specForm.email,
-            phone: specForm.phone,
-            bio: specForm.bio
-          };
-          const res = await axios.post('/api/trainers/update', payload);
-          if (res.data && res.data.success) {
-            toast.success('Trainer updated successfully!');
-            setEditingSpec(null);
-            setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
-            fetchSpecialists();
-          }
+        const payload = {
+          user_id: resolveSpecialistUserId(editingSpec),
+          name: specForm.name,
+          phone: specForm.phone,
+          address: specForm.address,
+          age: parseInt(specForm.age) || null,
+          gender: specForm.gender
+        };
+        const res = await updateAuthUser(payload);
+        if (res.data && (res.data.success || res.data.message)) {
+          toast.success(res.data.message || 'Specialist updated successfully!');
+          setSpecialists((prev) =>
+            prev.map((s) =>
+              resolveSpecialistUserId(s) === payload.user_id
+                ? { ...s, ...payload }
+                : s
+            )
+          );
+          setEditingSpec(null);
+          setSpecForm(emptySpecForm);
+          fetchSpecialists();
         } else {
-          toast.error('Update operation currently only optimized for Trainers via this route.');
+          toast.error(res.data?.message || 'Failed to update specialist.');
         }
       } else {
         const res = await createSpecialist(specForm);
         if (res.data && res.data.success) {
           toast.success('Specialist registered successfully!');
-          setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+          setSpecForm(emptySpecForm);
           fetchSpecialists();
         }
       }
@@ -290,16 +305,34 @@ function AdminManagement() {
     }
   };
 
-  const handleEditSpec = (spec) => {
+  const handleEditSpec = async (spec) => {
     setEditingSpec(spec);
-    setSpecForm({
-      name: spec.name || '',
-      email: spec.email || '',
-      password: '', // Kept empty for security during updates
-      role_name: spec.role || 'trainer',
-      phone: spec.phone || '',
-      bio: spec.bio || ''
-    });
+
+    const userId = resolveSpecialistUserId(spec);
+
+    try {
+      const res = await getUserDetail(userId);
+      const detail = res.data?.user;
+
+      if (!detail) {
+        toast.error(res.data?.message || 'Failed to load specialist details.');
+        return;
+      }
+
+      setSpecForm({
+        name: detail.name || spec.name || '',
+        email: spec.email || '',
+        password: '',
+        role_name: spec.role || 'trainer',
+        phone: detail.phone || '',
+        bio: (spec.bio?.text ?? spec.bio) || '',
+        address: detail.address || '',
+        age: detail.age != null && detail.age !== '' ? String(detail.age) : '',
+        gender: detail.gender || 'male'
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to load specialist details.');
+    }
   };
 
   const handleDeleteSpec = async (spec) => {
@@ -386,7 +419,7 @@ function AdminManagement() {
                   setEditingSpec(null);
                   setEquipmentForm({ name: '', description: '', status: 'available', booking_price: '25' });
                   setSubForm({ name: '', price: '', duration_days: '30', description: '', has_trainer: false, has_nutritionist: false, plan_type: 'both' });
-                  setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+                  setSpecForm(emptySpecForm);
                 }}
                 className="btn px-4 py-2.5 fw-bold text-uppercase d-flex align-items-center gap-2 hover-lift"
                 style={{
@@ -757,68 +790,132 @@ function AdminManagement() {
               {/* Specialists Form */}
               {activeTab === 'specialists' && (
                 <form onSubmit={handleAddSpec} className="d-flex flex-column gap-3">
-                  <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Name</label>
-                    <input
-                      type="text"
-                      value={specForm.name}
-                      onChange={(e) => setSpecForm({ ...specForm, name: e.target.value })}
-                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Email</label>
-                    <input
-                      type="email"
-                      value={specForm.email}
-                      onChange={(e) => setSpecForm({ ...specForm, email: e.target.value })}
-                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      required
-                    />
-                  </div>
-                  {!editingSpec && (
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Password</label>
-                      <input
-                        type="password"
-                        value={specForm.password}
-                        onChange={(e) => setSpecForm({ ...specForm, password: e.target.value })}
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        required
-                      />
-                    </div>
+                  {editingSpec ? (
+                    <>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">User ID</label>
+                        <input
+                          type="text"
+                          value={editingSpec.id}
+                          disabled
+                          className="form-control text-white-50 bg-black bg-opacity-60 border border-secondary border-opacity-10"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Name</label>
+                        <input
+                          type="text"
+                          value={specForm.name}
+                          onChange={(e) => setSpecForm({ ...specForm, name: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Phone</label>
+                        <input
+                          type="text"
+                          value={specForm.phone}
+                          onChange={(e) => setSpecForm({ ...specForm, phone: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Address</label>
+                        <input
+                          type="text"
+                          value={specForm.address}
+                          onChange={(e) => setSpecForm({ ...specForm, address: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                        />
+                      </div>
+                      <div className="row g-2">
+                        <div className="col-6">
+                          <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Age</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={specForm.age}
+                            onChange={(e) => setSpecForm({ ...specForm, age: e.target.value })}
+                            className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                          />
+                        </div>
+                        <div className="col-6">
+                          <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Gender</label>
+                          <select
+                            value={specForm.gender}
+                            onChange={(e) => setSpecForm({ ...specForm, gender: e.target.value })}
+                            className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                          >
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Name</label>
+                        <input
+                          type="text"
+                          value={specForm.name}
+                          onChange={(e) => setSpecForm({ ...specForm, name: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Email</label>
+                        <input
+                          type="email"
+                          value={specForm.email}
+                          onChange={(e) => setSpecForm({ ...specForm, email: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Password</label>
+                        <input
+                          type="password"
+                          value={specForm.password}
+                          onChange={(e) => setSpecForm({ ...specForm, password: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Role</label>
+                        <select
+                          value={specForm.role_name}
+                          onChange={(e) => setSpecForm({ ...specForm, role_name: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                        >
+                          <option value="trainer">Trainer</option>
+                          <option value="nutritionist">Nutritionist</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Phone</label>
+                        <input
+                          type="text"
+                          value={specForm.phone}
+                          onChange={(e) => setSpecForm({ ...specForm, phone: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Bio</label>
+                        <textarea
+                          value={specForm.bio}
+                          onChange={(e) => setSpecForm({ ...specForm, bio: e.target.value })}
+                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                          rows="3"
+                        ></textarea>
+                      </div>
+                    </>
                   )}
-                  <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Role</label>
-                    <select
-                      value={specForm.role_name}
-                      onChange={(e) => setSpecForm({ ...specForm, role_name: e.target.value })}
-                      disabled={!!editingSpec}
-                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                    >
-                      <option value="trainer">Trainer</option>
-                      <option value="nutritionist">Nutritionist</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Phone</label>
-                    <input
-                      type="text"
-                      value={specForm.phone}
-                      onChange={(e) => setSpecForm({ ...specForm, phone: e.target.value })}
-                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Bio</label>
-                    <textarea
-                      value={specForm.bio}
-                      onChange={(e) => setSpecForm({ ...specForm, bio: e.target.value })}
-                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      rows="3"
-                    ></textarea>
-                  </div>
                   <div className="d-flex gap-2 mt-3">
                     <button type="submit" className="btn btn-warning flex-grow-1 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
                       {editingSpec ? 'Update Specialist' : 'Register Specialist'}
@@ -828,7 +925,7 @@ function AdminManagement() {
                         type="button"
                         onClick={() => {
                           setEditingSpec(null);
-                          setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+                          setSpecForm(emptySpecForm);
                         }}
                         className="btn btn-outline-secondary fw-bold text-uppercase py-2"
                       >
