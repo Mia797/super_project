@@ -486,7 +486,7 @@ const userSubscriptions = [
     dietPlanId: 2002,
     trainerId: 3,
     nutritionistId: 4,
-    trainingStatus: 'Active',
+    trainingStatus: 'Pending Assign',
     nutritionStatus: 'Active'
   }
 ]; // { id, userId, planId, planName, amount, status, trainingPlanId, dietPlanId }
@@ -626,9 +626,11 @@ function serializeUser(user) {
 function assignSpecialistToSubscription(subscription, type, specialistId) {
   if (type === 'nutritionist') {
     subscription.nutritionistId = specialistId;
+    // Set status to Planning when a specialist is assigned, unless it's already Active
     subscription.nutritionStatus = subscription.nutritionStatus === 'Active' ? 'Active' : 'Planning';
   } else {
     subscription.trainerId = specialistId;
+    // Set status to Planning when a trainer is assigned, unless it's already Active
     subscription.trainingStatus = subscription.trainingStatus === 'Active' ? 'Active' : 'Planning';
   }
 
@@ -818,6 +820,28 @@ app.post('/api/nutritionists/delete', (req, res) => {
   users.splice(index, 1);
 
   res.json({ success: true, message: 'Nutritionist deleted successfully' });
+});
+
+app.get('/api/training/plans', (req, res) => {
+  const currentUser = getAuthenticatedUser(req);
+  if (!currentUser) return res.status(401).json({ error: 'Authentication required' });
+
+  const pendingPlans = userSubscriptions.filter(sub =>
+    sub.userId === currentUser.id &&
+    requiresTrainer(sub) &&
+    !sub.trainerId
+  );
+
+  res.json({
+    success: true,
+    plans: pendingPlans.map(sub => ({
+      id: sub.id,
+      planName: sub.planName,
+      goal: sub.goal,
+      description: sub.description,
+      status: sub.status
+    }))
+  });
 });
 
 app.post('/api/training/plans/assign', (req, res) => {
