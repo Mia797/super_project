@@ -4,6 +4,18 @@ import api from './axios';
 // Get user's active training plan
 export const getUserTrainingPlan = () => api.get('/training/user');
 
+// Training overview — all plans (role-filtered)
+export const getTrainingPlans = () => api.get('/training/plans');
+
 // Get list of workout exercises for a given training plan
 export const getWorkoutExercises = (planId) =>
   api.get(`/training/workout-exercises?plan_id=${planId}`);
+
+export const normalizeTrainingPlans = (payload) => {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.plans)) return payload.plans;
+  if (Array.isArray(payload.training_plans)) return payload.training_plans;
+  if (Array.isArray(payload.data?.plans)) return payload.data.plans;
+  return [];
+};

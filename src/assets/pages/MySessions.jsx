@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, Dumbbell, Apple, Trash2, Edit2, User, ChevronRight, AlertCircle, Compass, Sparkles, CheckCircle2, TrendingUp, Activity, Shield } from 'lucide-react';
 import { Modal, Button, Form, Badge } from 'react-bootstrap';
@@ -7,6 +7,11 @@ import { useNavigate } from 'react-router-dom';
 import { cancelBooking, getAllBookings, mapMachineBooking, normalizeBookings } from '../../api/bookingApi';
 import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../context/SubscriptionContext';
+import {
+  extractAssignedTrainers,
+  extractAssignedNutritionists,
+  clearLegacySpecialistStorage
+} from '../../utils/assignedSpecialists';
 
 // Default Sample Scheduled Sessions to show if localStorage is empty
 const SAMPLE_SESSIONS = [
@@ -56,11 +61,12 @@ function MySessions() {
 
   // State
   const [scheduledSessions, setScheduledSessions] = useState([]);
-  const [bookedTrainers, setBookedTrainers] = useState([]);
-  const [bookedNutritionists, setBookedNutritionists] = useState([]);
   const [bookedMachines, setBookedMachines] = useState([]);
   const [cancellingMachineId, setCancellingMachineId] = useState(null);
   const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' | 'past'
+
+  const assignedTrainers = useMemo(() => extractAssignedTrainers(mySubs), [mySubs]);
+  const assignedNutritionists = useMemo(() => extractAssignedNutritionists(mySubs), [mySubs]);
 
   const fetchBookedMachines = async () => {
     try {
@@ -147,10 +153,7 @@ function MySessions() {
     }
     
     setScheduledSessions(storedSessions);
-
-    // Load specialists
-    setBookedTrainers(JSON.parse(localStorage.getItem('bookedTrainers') || '[]'));
-    setBookedNutritionists(JSON.parse(localStorage.getItem('bookedNutritionists') || '[]'));
+    clearLegacySpecialistStorage();
     fetchBookedMachines();
 
     fetchMySubs();
@@ -325,7 +328,7 @@ function MySessions() {
           <div className="col-6 col-md-2">
             <div className="p-3 rounded-3 border border-secondary border-opacity-10 text-center" style={{ background: 'rgba(255,255,255,0.01)' }}>
               <span className="text-secondary small text-uppercase d-block mb-1" style={{ fontSize: '0.6rem', letterSpacing: '0.5px' }}>Specialists</span>
-              <span className="fs-3 fw-black text-info">{bookedTrainers.length + bookedNutritionists.length}</span>
+              <span className="fs-3 fw-black text-info">{assignedTrainers.length + assignedNutritionists.length}</span>
             </div>
           </div>
         </div>
@@ -583,7 +586,7 @@ function MySessions() {
             🤝 My Assigned Gym Specialists
           </h3>
           
-          {bookedTrainers.length === 0 && bookedNutritionists.length === 0 ? (
+          {assignedTrainers.length === 0 && assignedNutritionists.length === 0 ? (
             <div className="p-4 rounded-4 border border-secondary border-opacity-10 text-center" style={{ background: 'rgba(255,255,255,0.01)' }}>
               <p className="text-secondary small mb-3">You do not have any assigned elite trainers or nutritionists yet.</p>
               <div className="d-flex justify-content-center gap-3">
@@ -598,7 +601,7 @@ function MySessions() {
           ) : (
             <div className="row g-3">
               {/* Trainers */}
-              {bookedTrainers.map((trainer, idx) => (
+              {assignedTrainers.map((trainer, idx) => (
                 <div key={trainer.id || idx} className="col-12 col-md-6">
                   <div className="p-3 rounded-4 h-100 d-flex align-items-center justify-content-between" style={{
                     background: 'rgba(0, 230, 115, 0.03)',
@@ -627,7 +630,7 @@ function MySessions() {
               ))}
 
               {/* Nutritionists */}
-              {bookedNutritionists.map((pro, idx) => (
+              {assignedNutritionists.map((pro, idx) => (
                 <div key={pro.id || idx} className="col-12 col-md-6">
                   <div className="p-3 rounded-4 h-100 d-flex align-items-center justify-content-between" style={{
                     background: 'rgba(255, 193, 7, 0.03)',

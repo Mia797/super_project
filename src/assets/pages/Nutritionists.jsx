@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { Modal, Button, Badge } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useSubscription } from '../../context/SubscriptionContext';
+import { bookNutritionist, SPECIALIST_BOOKING_TOKENS } from '../../api/specialistApi';
+import { clearLegacySpecialistStorage } from '../../utils/assignedSpecialists';
+import { toast } from 'react-toastify';
 import './Nutritionists.css';
 
 function Nutritionists() {
@@ -10,6 +16,15 @@ function Nutritionists() {
   const [planLoading, setPlanLoading] = useState(false);
   const [selectedNutritionist, setSelectedNutritionist] = useState(null);
   const [confirmBooking, setConfirmBooking] = useState(null);
+  const [bookingGoal, setBookingGoal] = useState('');
+  const [bookingDescription, setBookingDescription] = useState('');
+  const navigate = useNavigate();
+  const { user, refreshUser } = useAuth();
+  const { fetchMySubs } = useSubscription();
+
+  useEffect(() => {
+    clearLegacySpecialistStorage();
+  }, []);
 
   useEffect(() => {
     const fetchNutritionists = async () => {
@@ -35,58 +50,52 @@ function Nutritionists() {
   ];
 
   const handleSecurePlan = (nutritionistId, nutritionistName) => {
+    if (!user) {
+      toast.warning('Please log in to book a nutritionist.');
+      navigate('/login');
+      return;
+    }
+    setBookingGoal('');
+    setBookingDescription('');
     setConfirmBooking({ nutritionistId, nutritionistName });
   };
 
   const confirmNutritionistBooking = async () => {
     if (!confirmBooking) return;
-    
+
     const { nutritionistId, nutritionistName } = confirmBooking;
     setPlanLoading(true);
-    
+
     try {
-      // API call to assign nutritionist
-      const response = await axios.post('/api/nutrition/plans/assign', { nutritionistId });
-      
-      if (response.data && (response.data.success || response.data.plan)) {
-        // Save booked nutritionist to localStorage
-        const bookedNutritionistsData = JSON.parse(localStorage.getItem('bookedNutritionists') || '[]');
-        const nutritionist = nutritionists.find(n => n.id === nutritionistId);
-        
-        if (!bookedNutritionistsData.find(n => n.id === nutritionistId)) {
-          bookedNutritionistsData.push({ 
-            id: nutritionistId, 
-            name: nutritionistName,
-            image_url: nutritionist?.image_url,
-            bio: nutritionist?.bio,
-            bookedAt: new Date().toISOString()
-          });
-          localStorage.setItem('bookedNutritionists', JSON.stringify(bookedNutritionistsData));
-        }
-        
+      const response = await bookNutritionist({
+        nutritionist_id: nutritionistId,
+        goal: bookingGoal.trim(),
+        description: bookingDescription.trim()
+      });
+
+      if (response.data?.success || response.data?.message) {
+        await refreshUser();
+        await fetchMySubs();
+        toast.success(response.data?.message || 'Nutritionist booked successfully!');
         setSelectedNutritionist(null);
         setConfirmBooking(null);
+        setBookingGoal('');
+        setBookingDescription('');
+        setTimeout(() => navigate('/my-subscriptions'), 500);
+      } else {
+        toast.error(response.data?.message || 'Booking failed.');
       }
     } catch (error) {
-      console.error('Plan assignment error:', error);
-      if (error.response?.status === 403) {
-        // Still save the booking intent
-        const bookedNutritionistsData = JSON.parse(localStorage.getItem('bookedNutritionists') || '[]');
-        const nutritionist = nutritionists.find(n => n.id === nutritionistId);
-        
-        if (!bookedNutritionistsData.find(n => n.id === nutritionistId)) {
-          bookedNutritionistsData.push({ 
-            id: nutritionistId, 
-            name: nutritionistName,
-            image_url: nutritionist?.image_url,
-            bio: nutritionist?.bio,
-            bookedAt: new Date().toISOString()
-          });
-          localStorage.setItem('bookedNutritionists', JSON.stringify(bookedNutritionistsData));
-        }
-        
-        setSelectedNutritionist(null);
-        setConfirmBooking(null);
+      const status = error.response?.status;
+      const message = error.response?.data?.message || error.response?.data?.error;
+
+      if (status === 409) {
+        toast.error(message || 'You already have an active or pending diet plan.');
+      } else if (status === 401) {
+        toast.warning('Please log in to book a nutritionist.');
+        navigate('/login');
+      } else {
+        toast.error(message || 'Booking failed. Check your balance and try again.');
       }
     } finally {
       setPlanLoading(false);
@@ -97,14 +106,14 @@ function Nutritionists() {
     <div className="nutritionists-container">
       <div className="nutritionists-content">
         <div className="text-center mb-5">
-          <motion.h1 
+          <motion.h1
             className="display-3 fw-black text-uppercase section-title mb-3"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
             Fuel Your <span className="text-gradient">Fire</span>
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="nutritionists-header-subtitle"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -124,29 +133,29 @@ function Nutritionists() {
           <div className="row g-4 justify-content-center mt-4">
             {nutritionists.map((pro, idx) => (
               <div key={pro.id || idx} className="col-lg-5 col-md-6">
-                <motion.div 
+                <motion.div
                   className="nutritionist-card"
                   initial={{ opacity: 0, y: 30, scale: 0.95 }}
                   whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true, margin: "-50px" }}
+                  viewport={{ once: true, margin: '-50px' }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
                   onClick={() => setSelectedNutritionist(pro)}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="nutritionist-img-wrapper">
-                    <img 
-                      src={pro.image_url || fallbackImages[idx % fallbackImages.length]} 
-                      alt={pro.name} 
-                      className="nutritionist-img" 
+                    <img
+                      src={pro.image_url || fallbackImages[idx % fallbackImages.length]}
+                      alt={pro.name}
+                      className="nutritionist-img"
                     />
                     <div className="nutritionist-img-overlay"></div>
                   </div>
-                  
+
                   <div className="nutritionist-info">
                     <h3 className="nutritionist-title">{pro.name}</h3>
                     <p className="nutritionist-spec">{typeof pro.bio === 'string' ? pro.bio : (pro.bio?.text || 'Sports & Performance Nutrition')}</p>
-                    
-                    <button 
+
+                    <button
                       className="btn-premium w-100 mt-auto justify-content-center"
                       disabled={planLoading}
                       onClick={(e) => {
@@ -154,13 +163,13 @@ function Nutritionists() {
                         handleSecurePlan(pro.id, pro.name);
                       }}
                     >
-                      {planLoading ? 'Booking...' : 'Book Now'}
+                      {planLoading ? 'Booking...' : `Book Now (${SPECIALIST_BOOKING_TOKENS} Tokens)`}
                     </button>
                   </div>
                 </motion.div>
               </div>
             ))}
-            
+
             {nutritionists.length === 0 && (
               <div className="text-center text-secondary w-100 mt-4">
                 <p>No nutritionists available at the moment.</p>
@@ -170,9 +179,9 @@ function Nutritionists() {
         )}
       </div>
 
-      <Modal 
-        show={!!selectedNutritionist} 
-        onHide={() => setSelectedNutritionist(null)} 
+      <Modal
+        show={!!selectedNutritionist}
+        onHide={() => setSelectedNutritionist(null)}
         centered
         size="lg"
         contentClassName="bg-dark border-0 overflow-hidden shadow-lg"
@@ -188,13 +197,13 @@ function Nutritionists() {
             <Modal.Body className="p-0 bg-dark">
               <div className="row g-0">
                 <div className="col-md-5 position-relative">
-                  <img 
-                    src={selectedNutritionist.image_url || fallbackImages[nutritionists.indexOf(selectedNutritionist) % fallbackImages.length]} 
+                  <img
+                    src={selectedNutritionist.image_url || fallbackImages[nutritionists.indexOf(selectedNutritionist) % fallbackImages.length]}
                     alt={selectedNutritionist.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: '400px' }}
                   />
                   <div className="position-absolute bottom-0 start-0 w-100 p-4" style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
-                     <h2 className="fw-black text-white mb-0 text-uppercase">{selectedNutritionist.name}</h2>
+                    <h2 className="fw-black text-white mb-0 text-uppercase">{selectedNutritionist.name}</h2>
                   </div>
                 </div>
                 <div className="col-md-7 p-5 bg-dark">
@@ -204,7 +213,7 @@ function Nutritionists() {
                       {selectedNutritionist.experience_years ? `${selectedNutritionist.experience_years}+ Years Professional` : 'Certified Nutritionist'}
                     </p>
                   </div>
-                  
+
                   <h5 className="fw-black text-white mb-3 text-uppercase" style={{ letterSpacing: '1px' }}>The Biography</h5>
                   <p className="text-white opacity-75 mb-5" style={{ lineHeight: '1.8', fontSize: '1.05rem' }}>
                     {typeof selectedNutritionist.bio === 'string' ? selectedNutritionist.bio : (selectedNutritionist.bio?.text || 'Expert nutritional guidance for high-performance lifestyles.')}
@@ -256,23 +265,22 @@ function Nutritionists() {
               <Button variant="link" onClick={() => setSelectedNutritionist(null)} className="text-white opacity-50 text-decoration-none fw-bold text-uppercase small">
                 Back to List
               </Button>
-              <Button 
-                onClick={() => handleSecurePlan(selectedNutritionist.id, selectedNutritionist.name)} 
+              <Button
+                onClick={() => handleSecurePlan(selectedNutritionist.id, selectedNutritionist.name)}
                 disabled={planLoading}
                 className="px-5 py-3 rounded-0 fw-black text-uppercase shadow-sm"
                 style={{ background: 'var(--accent-primary)', border: 'none', color: 'white', letterSpacing: '1px' }}
               >
-                {planLoading ? 'Booking...' : 'Book Now'}
+                {planLoading ? 'Booking...' : `Book Now (${SPECIALIST_BOOKING_TOKENS} Tokens)`}
               </Button>
             </Modal.Footer>
           </>
         )}
       </Modal>
 
-      {/* Confirmation Modal for Booking */}
-      <Modal 
-        show={!!confirmBooking} 
-        onHide={() => setConfirmBooking(null)} 
+      <Modal
+        show={!!confirmBooking}
+        onHide={() => setConfirmBooking(null)}
         centered
         size="lg"
         contentClassName="bg-dark border-0 overflow-hidden shadow-lg"
@@ -287,27 +295,50 @@ function Nutritionists() {
             </Modal.Header>
             <Modal.Body className="p-4 bg-dark">
               <div className="text-center mb-4">
-                <h5 className="text-white fw-bold mb-2">Are you sure you want to book with this nutritionist?</h5>
-                <p className="text-secondary mb-0">They will start preparing your custom nutrition plan.</p>
+                <h5 className="text-white fw-bold mb-2">Book this nutritionist for your diet plan?</h5>
+                <p className="text-secondary mb-0">
+                  {SPECIALIST_BOOKING_TOKENS} tokens will be charged from your balance. Your specialist will start planning immediately.
+                </p>
               </div>
-              <div className="p-4 rounded border border-success border-opacity-25" style={{ backgroundColor: 'rgba(0, 230, 115, 0.05)' }}>
+              <div className="p-4 rounded border border-success border-opacity-25 mb-4" style={{ backgroundColor: 'rgba(0, 230, 115, 0.05)' }}>
                 <div className="text-center">
                   <p className="text-white-50 small mb-1">SELECTED NUTRITIONIST</p>
-                  <h4 className="text-white fw-black text-uppercase">{confirmBooking.nutritionistName}</h4>
+                  <h4 className="text-white fw-black text-uppercase mb-2">{confirmBooking.nutritionistName}</h4>
+                  <p className="text-warning fw-bold mb-0">{SPECIALIST_BOOKING_TOKENS} Tokens</p>
                 </div>
+              </div>
+              <div className="mb-3">
+                <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Goal (optional)</label>
+                <input
+                  type="text"
+                  value={bookingGoal}
+                  onChange={(e) => setBookingGoal(e.target.value)}
+                  placeholder="e.g. Weight loss"
+                  className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                />
+              </div>
+              <div>
+                <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Description (optional)</label>
+                <textarea
+                  value={bookingDescription}
+                  onChange={(e) => setBookingDescription(e.target.value)}
+                  placeholder="e.g. Low carb preference"
+                  rows={3}
+                  className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                />
               </div>
             </Modal.Body>
             <Modal.Footer className="border-0 p-4 bg-dark border-top border-secondary border-opacity-25 d-flex gap-2">
               <Button variant="link" onClick={() => setConfirmBooking(null)} className="text-white opacity-50 text-decoration-none fw-bold text-uppercase small me-auto">
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={confirmNutritionistBooking}
                 disabled={planLoading}
                 className="px-4 py-3 rounded-0 fw-black text-uppercase shadow-sm"
                 style={{ background: 'var(--accent-primary)', border: 'none', color: 'white', letterSpacing: '1px' }}
               >
-                {planLoading ? 'Booking...' : 'Confirm Booking'}
+                {planLoading ? 'Booking...' : `Confirm (${SPECIALIST_BOOKING_TOKENS} Tokens)`}
               </Button>
             </Modal.Footer>
           </>

@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, Dumbbell, Apple, Sparkles, User, Users, MapPin, Search, Filter, Compass, Flame, AlertCircle } from 'lucide-react';
 import { Modal, Button, Form, Badge } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSubscription } from '../../context/SubscriptionContext';
+import {
+  extractAssignedTrainers,
+  extractAssignedNutritionists,
+  clearLegacySpecialistStorage
+} from '../../utils/assignedSpecialists';
 import axios from 'axios';
 
 // Group Classes Catalog
@@ -88,6 +94,7 @@ const GROUP_CLASSES = [
 
 function Sessions() {
   const { user } = useAuth();
+  const { mySubs, fetchMySubs } = useSubscription();
   const navigate = useNavigate();
 
   // Specialist lists
@@ -97,8 +104,9 @@ function Sessions() {
 
   // User bookings
   const [scheduledSessions, setScheduledSessions] = useState([]);
-  const [bookedTrainers, setBookedTrainers] = useState([]);
-  const [bookedNutritionists, setBookedNutritionists] = useState([]);
+
+  const assignedTrainers = useMemo(() => extractAssignedTrainers(mySubs), [mySubs]);
+  const assignedNutritionists = useMemo(() => extractAssignedNutritionists(mySubs), [mySubs]);
 
   // Search/Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,29 +145,30 @@ function Sessions() {
     };
 
     fetchSpecialists();
+    clearLegacySpecialistStorage();
+
+    if (user) {
+      fetchMySubs();
+    }
 
     // Load scheduled sessions
     const storedSessions = JSON.parse(localStorage.getItem('scheduledSessions') || '[]');
     setScheduledSessions(storedSessions);
-
-    // Load assigned specialists from localStorage
-    setBookedTrainers(JSON.parse(localStorage.getItem('bookedTrainers') || '[]'));
-    setBookedNutritionists(JSON.parse(localStorage.getItem('bookedNutritionists') || '[]'));
-  }, []);
+  }, [user]);
 
   // Set default specialist when booking modal opens or type changes
   useEffect(() => {
     if (bookingType === 'workout') {
-      if (bookedTrainers.length > 0) {
-        setSelectedSpecialist(bookedTrainers[0].name);
+      if (assignedTrainers.length > 0) {
+        setSelectedSpecialist(assignedTrainers[0].name);
       } else if (trainers.length > 0) {
         setSelectedSpecialist(trainers[0].name);
       } else {
         setSelectedSpecialist('Coach Alex');
       }
     } else if (bookingType === 'nutrition') {
-      if (bookedNutritionists.length > 0) {
-        setSelectedSpecialist(bookedNutritionists[0].name);
+      if (assignedNutritionists.length > 0) {
+        setSelectedSpecialist(assignedNutritionists[0].name);
       } else if (nutritionists.length > 0) {
         setSelectedSpecialist(nutritionists[0].name);
       } else {
@@ -168,7 +177,7 @@ function Sessions() {
     } else {
       setSelectedSpecialist('Gym Staff Marshal');
     }
-  }, [bookingType, bookedTrainers, bookedNutritionists, trainers, nutritionists, showBookingModal]);
+  }, [bookingType, assignedTrainers, assignedNutritionists, trainers, nutritionists, showBookingModal]);
 
   // Join a Group Class
   const handleJoinGroupClass = (classItem) => {
@@ -567,8 +576,8 @@ function Sessions() {
                   >
                     {bookingType === 'workout' && (
                       <>
-                        {bookedTrainers.length > 0 ? (
-                          bookedTrainers.map((t) => <option key={t.id} value={t.name} className="bg-dark text-white">{t.name} (Assigned)</option>)
+                        {assignedTrainers.length > 0 ? (
+                          assignedTrainers.map((t) => <option key={t.id} value={t.name} className="bg-dark text-white">{t.name} (Assigned)</option>)
                         ) : null}
                         {trainers.map((t) => (
                           <option key={t.id} value={t.name} className="bg-dark text-white">{t.name} ({t.experience_years ? `${t.experience_years}y exp` : 'Master Trainer'})</option>
@@ -579,8 +588,8 @@ function Sessions() {
                     )}
                     {bookingType === 'nutrition' && (
                       <>
-                        {bookedNutritionists.length > 0 ? (
-                          bookedNutritionists.map((n) => <option key={n.id} value={n.name} className="bg-dark text-white">{n.name} (Assigned)</option>)
+                        {assignedNutritionists.length > 0 ? (
+                          assignedNutritionists.map((n) => <option key={n.id} value={n.name} className="bg-dark text-white">{n.name} (Assigned)</option>)
                         ) : null}
                         {nutritionists.map((n) => (
                           <option key={n.id} value={n.name} className="bg-dark text-white">{n.name} ({n.experience_years ? `${n.experience_years}y exp` : 'Dietitian'})</option>
