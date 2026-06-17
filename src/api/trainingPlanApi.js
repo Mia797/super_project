@@ -19,3 +19,24 @@ export const normalizeTrainingPlans = (payload) => {
   if (Array.isArray(payload.data?.plans)) return payload.data.plans;
   return [];
 };
+
+export const normalizeWorkoutExercises = (payload) => {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.exercises)) return payload.exercises;
+  return Object.keys(payload)
+    .filter((key) => key !== 'success' && key !== 'message' && !Number.isNaN(Number(key)))
+    .map((key) => payload[key]);
+};
+
+export const normalizeUserTrainingPlan = (payload) => {
+  if (!payload) return { plan: null, exercises: [] };
+  const plan = payload.plan || payload.training_plan || null;
+  let exercises = [];
+  if (Array.isArray(payload.exercises)) {
+    exercises = payload.exercises;
+  } else if (payload.exercises) {
+    exercises = normalizeWorkoutExercises(payload.exercises);
+  }
+  return { plan, exercises };
+};

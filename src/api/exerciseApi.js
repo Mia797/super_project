@@ -60,7 +60,25 @@ export const getExercises = async (search = '', category = '', difficulty = '') 
     // ❌ IMPORTANT: no /api هنا
     const res = await api.get(`/exercises?${params.toString()}`);
 
-    return res;
+    let exercisesList = [];
+    if (res.data) {
+      if (Array.isArray(res.data.exercises)) {
+        exercisesList = res.data.exercises;
+      } else if (Array.isArray(res.data)) {
+        exercisesList = res.data;
+      } else {
+        exercisesList = Object.keys(res.data)
+          .filter((key) => key !== 'success' && key !== 'message' && !Number.isNaN(Number(key)))
+          .map((key) => res.data[key]);
+      }
+    }
+
+    return {
+      data: {
+        success: res.data?.success ?? true,
+        exercises: exercisesList,
+      },
+    };
   } catch (error) {
     console.error('❌ Error fetching exercises:', error.response?.data || error.message);
 

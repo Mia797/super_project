@@ -26,9 +26,19 @@ export const bookNutritionist = ({ nutritionist_id, goal, description }) =>
 export const updateSpecialistProfile = (profileData) =>
   api.post('/auth/specialist-profile', profileData);
 
-// Add exercise splits to a client training plan
-export const addExercisesToPlan = (planId, exercises) =>
-  api.post('/training/plans/add-exercises', { planId, exercises });
+// Add exercises from the library to a client training plan
+export const addExercisesToPlan = (training_plan_id, exercises) =>
+  api.post('/training/plans/add-exercises', {
+    training_plan_id: Number(training_plan_id),
+    exercises: exercises.map((e) => ({
+      exercise_id: Number(e.exercise_id),
+      day_number: Number(e.day_number ?? 1),
+      sort_order: Number(e.sort_order ?? 1),
+      sets: Number(e.sets ?? 3),
+      reps: Number(e.reps ?? 10),
+      rest_time: Number(e.rest_time ?? 60),
+    })),
+  });
 
 // Add meals from the library to a client nutrition plan
 export const addMealsToPlan = (diet_plan_id, meals) =>
