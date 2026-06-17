@@ -8,6 +8,8 @@ import './Trainers.css';
 
 function Trainers() {
   const [trainers, setTrainers] = useState([]);
+  const [pendingPlans, setPendingPlans] = useState([]);
+  const [selectedPlanId, setSelectedPlanId] = useState('');
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState(null);
@@ -15,20 +17,31 @@ function Trainers() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchTrainers = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('/api/trainers');
-        if (response.data && response.data.success && Array.isArray(response.data.trainers)) {
-          setTrainers(response.data.trainers);
+        const [trainersRes, plansRes] = await Promise.all([
+          axios.get('/api/trainers'),
+          axios.get('/api/training/plans')
+        ]);
+
+        if (trainersRes.data && trainersRes.data.success && Array.isArray(trainersRes.data.trainers)) {
+          setTrainers(trainersRes.data.trainers);
+        }
+
+        if (plansRes.data && plansRes.data.success && Array.isArray(plansRes.data.plans)) {
+          setPendingPlans(plansRes.data.plans);
+          if (plansRes.data.plans.length === 1) {
+            setSelectedPlanId(plansRes.data.plans[0].id);
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch trainers:', error);
+        console.error('Failed to fetch trainers or plans:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTrainers();
+    fetchData();
   }, []);
 
   // Fallback images based on index
@@ -46,15 +59,22 @@ function Trainers() {
 
   const confirmTrainerBooking = async () => {
     if (!confirmBooking) return;
+    if (pendingPlans.length > 0 && !selectedPlanId) {
+      alert('Please select a training plan to assign this trainer to.');
+      return;
+    }
     
     const { trainerId, trainerName } = confirmBooking;
     setBookingLoading(true);
     
     try {
       // API call to assign trainer
-      const response = await axios.post('/api/training/plans/assign', { trainerId });
+      const response = await axios.post('/api/training/plans/assign', {
+        trainerId,
+        subscriptionId: selectedPlanId
+      });
       
-      if (response.data && (response.data.success || response.data.plan)) {
+      if (response.data && (response.data.success || response.data.subscription)) {
         // Save booked trainer to localStorage
         const bookedTrainersData = JSON.parse(localStorage.getItem('bookedTrainers') || '[]');
         const trainer = trainers.find(t => t.id === trainerId);
@@ -321,12 +341,55 @@ function Trainers() {
                 <h5 className="text-white fw-bold mb-2">Are you sure you want to book with this trainer?</h5>
                 <p className="text-secondary mb-0">This trainer will be added to your sessions list.</p>
               </div>
-              <div className="p-4 rounded border border-warning border-opacity-25" style={{ backgroundColor: 'rgba(255, 122, 0, 0.05)' }}>
-                <div className="text-center">
-                  <p className="text-white-50 small mb-1">SELECTED TRAINER</p>
-                  <h4 className="text-white fw-black text-uppercase">{confirmBooking.trainerName}</h4>
+
+              {pendingPlans.length === 0 ? (
+                <div className="alert alert-warning border-0 rounded-0">
+                  <p className="mb-0 fw-bold">No pending training subscriptions found.</p>
+                  <p className="small mb-0">You need an active subscription that requires a trainer before you can assign one.</p>
+                  <Button
+                    variant="warning"
+                    className="mt-3 w-100 rounded-0 fw-bold"
+                    onClick={() => navigate('/subscriptions')}
+                  >
+                    View Subscriptions
+                  </Button>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {pendingPlans.length > 1 && (
+                    <div className="mb-4">
+                      <label className="text-white-50 small mb-2 text-uppercase fw-bold">Select Training Plan</label>
+                      <select
+                        className="form-select bg-dark text-white border-secondary rounded-0"
+                        value={selectedPlanId}
+                        onChange={(e) => setSelectedPlanId(e.target.value)}
+                      >
+                        <option value="">-- Choose a plan --</option>
+                        {pendingPlans.map(plan => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.planName} ({plan.goal})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="p-4 rounded border border-warning border-opacity-25" style={{ backgroundColor: 'rgba(255, 122, 0, 0.05)' }}>
+                    <div className="text-center">
+                      <p className="text-white-50 small mb-1">SELECTED TRAINER</p>
+                      <h4 className="text-white fw-black text-uppercase">{confirmBooking.trainerName}</h4>
+                      {selectedPlanId && (
+                        <div className="mt-2 pt-2 border-top border-warning border-opacity-10">
+                          <p className="text-white-50 small mb-0">FOR PLAN</p>
+                          <p className="text-warning fw-bold mb-0">
+                            {pendingPlans.find(p => String(p.id) === String(selectedPlanId))?.planName}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </Modal.Body>
             <Modal.Footer className="border-0 p-4 bg-dark border-top border-secondary border-opacity-25 d-flex gap-2">
               <Button variant="link" onClick={() => setConfirmBooking(null)} className="text-white opacity-50 text-decoration-none fw-bold text-uppercase small me-auto">
@@ -334,9 +397,15 @@ function Trainers() {
               </Button>
               <Button 
                 onClick={confirmTrainerBooking}
-                disabled={bookingLoading}
+                disabled={bookingLoading || (pendingPlans.length > 0 && !selectedPlanId) || pendingPlans.length === 0}
                 className="px-4 py-3 rounded-0 fw-black text-uppercase shadow-sm"
-                style={{ background: 'var(--accent-primary)', border: 'none', color: 'white', letterSpacing: '1px' }}
+                style={{
+                  background: 'var(--accent-primary)',
+                  border: 'none',
+                  color: 'white',
+                  letterSpacing: '1px',
+                  opacity: (bookingLoading || (pendingPlans.length > 0 && !selectedPlanId) || pendingPlans.length === 0) ? 0.5 : 1
+                }}
               >
                 {bookingLoading ? 'Booking...' : 'Confirm Booking'}
               </Button>
