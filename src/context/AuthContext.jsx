@@ -48,40 +48,54 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Attempt to fetch profile on load to check if session is valid
-    const checkSession = async () => {
-      let storedUser = null;
+  console.log("AuthContext mounted → checking session...");
 
-      try {
-        storedUser = normalizeUser(JSON.parse(window.localStorage.getItem(AUTH_USER_STORAGE_KEY) || 'null'));
-      } catch (error) {
-        console.error('Failed to read saved auth user:', error);
-      }
+  const checkSession = async () => {
+    let storedUser = null;
 
-      if (storedUser) {
-        syncAuthState(storedUser);
-        setUser(storedUser);
-      }
+    try {
+      storedUser = normalizeUser(
+        JSON.parse(window.localStorage.getItem(AUTH_USER_STORAGE_KEY) || 'null')
+      );
 
-      try {
-        const response = await axios.get('/api/auth/profile');
-        if (response.data && response.data.user && response.data.user.id) {
-          const loggedInUser = normalizeUser(response.data.user);
-          syncAuthState(loggedInUser);
-          setUser(loggedInUser);
-        }
-      } catch (error) {
-        if (!storedUser) {
-          syncAuthState(null);
-          setUser(null);
-        }
-      } finally {
-        setLoading(false);
+      console.log("Stored user from localStorage:", storedUser);
+    } catch (error) {
+      console.error('Failed to read saved auth user:', error);
+    }
+
+    if (storedUser) {
+      console.log("Using stored user");
+      syncAuthState(storedUser);
+      setUser(storedUser);
+    }
+
+    try {
+      const response = await axios.get('/api/auth/profile');
+
+      console.log("Profile API response:", response.data);
+
+      if (response.data && response.data.user && response.data.user.id) {
+        const loggedInUser = normalizeUser(response.data.user);
+
+        console.log("Logged-in user from API:", loggedInUser);
+
+        syncAuthState(loggedInUser);
+        setUser(loggedInUser);
       }
-    };
-    
-    checkSession();
-  }, []);
+    } catch (error) {
+      console.error("Profile request failed:", error);
+
+      if (!storedUser) {
+        syncAuthState(null);
+        setUser(null);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  checkSession();
+}, []);
 
   const refreshUser = async () => {
     try {

@@ -22,7 +22,8 @@ export const getUserSubscriptions = (user) =>
 // Admin: create a new subscription plan
 export const createSubscriptionPlan = (payload) =>
   api.post('/subscriptions/create', payload);
-
 // Get AI plans for the logged-in user
 export const getAIPlans = (user) =>
   api.get('/subscriptions/ai-plans', userHeaders(user));
+
+console.log("User API Plans function 123 defined:", getAIPlans.response);

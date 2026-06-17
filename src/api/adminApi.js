@@ -49,6 +49,7 @@ export const createSpecialist = (specialistData) =>
   api.post('/specialists/create', specialistData);
 
 export const updateSpecialist = (specialistData) =>
+  //update msh mawgouda fl database
   api.post('/specialists/update', specialistData);
 
 export const deleteTrainer = (userId) =>

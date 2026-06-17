@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-
+ import { getAIPlans, createAIPlan } from '../../api/subscriptionApi';
 function AIPlans() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -9,51 +9,49 @@ function AIPlans() {
   const [loading, setLoading] = useState(true);
   const [expandedPlans, setExpandedPlans] = useState({});
 
-  // Mock data for testing
-  useEffect(() => {
-    if (user) {
+ 
+
+useEffect(() => {
+  const fetchAIPlans = async () => {
+    try {
       setLoading(true);
-      // Simulate API call with mock data
-      setTimeout(() => {
-        setAIPlans([
-          {
-            id: 1,
-            created_at: new Date().toISOString(),
-            inbody: {
-              goal: 'Weight Loss',
-              weight: 75,
-              height: 175,
-              age: 25,
-              gender: 'male',
-              body_fat: 15.5,
-              muscle_mass: 35,
-              water_perc: 58.5
-            },
-            ai_plan: {
-              calories: 2000,
-              protein: 150,
-              carbs: 200,
-              fat: 67,
-              workout_plan: {
-                training_days_per_week: 4,
-                cardio_minutes_per_week: 120,
-                strength_sessions: 3,
-                recommended_sets: 3,
-                recommended_reps: 12
-              },
-              plan: [
-                { food: 'Chicken Breast', servings: 2, calories: 300, protein: 50, carbs: 0, fat: 6 },
-                { food: 'Brown Rice', servings: 1, calories: 200, protein: 5, carbs: 45, fat: 2 }
-              ]
-            }
-          }
-        ]);
-        setLoading(false);
-      }, 500);
-    } else {
+
+      if (!user) return;
+
+      const planData = {
+        goal: user.goal || "Weight Loss",
+        weight: user.weight,
+        height: user.height,
+        age: user.age,
+        gender: user.gender,
+        body_fat: user.body_fat,
+        muscle_mass: user.muscle_mass,
+        water_perc: user.water_perc
+      };
+
+      console.log("Sending AI Plan request:", planData);
+
+      // 1. generate new AI plan
+      await createAIPlan(planData, user);
+
+      // 2. fetch saved plans
+      const response = await getAIPlans(user);
+
+      console.log("AI Plans response:", response.data);
+
+      setAIPlans(response.data);
+
+    } catch (error) {
+      console.error("Error loading AI plans:", error.response?.data || error);
+    } finally {
       setLoading(false);
     }
-  }, [user]);
+  };
+
+  if (user) fetchAIPlans();
+}, [user]);
+
+  
 
   const togglePlan = (planId) => {
     setExpandedPlans(prev => ({
