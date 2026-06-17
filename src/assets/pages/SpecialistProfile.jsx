@@ -73,17 +73,14 @@ function SpecialistProfile() {
   };
 
   return (
-    <div
-      className="profile-container text-white d-flex align-items-center justify-content-center py-5"
-      style={{ background: '#000' }}
-    >
+    <div className="profile-container text-white d-flex align-items-center justify-content-center py-5">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="profile-card p-4 col-12 col-md-8 col-lg-6"
         style={{
-          background: '#000',
+          background: 'rgba(20, 20, 20, 0.65)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'

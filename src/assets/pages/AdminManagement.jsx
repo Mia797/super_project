@@ -11,10 +11,8 @@ import {
   updateEquipment,
   deleteEquipment,
   createSpecialist,
-  updateSpecialist,
   deleteTrainer,
   deleteNutritionist,
-  updateUser,
   deleteUser
 } from '../../api/adminApi';
 import { createSubscriptionPlan } from '../../api/subscriptionApi';
@@ -37,10 +35,7 @@ function AdminManagement() {
   const [equipmentForm, setEquipmentForm] = useState({ name: '', description: '', status: 'available', booking_price: '25' });
   const [subForm, setSubForm] = useState({ name: '', price: '', duration_days: '30', description: '', has_trainer: false, has_nutritionist: false, plan_type: 'both' });
   const [editingSub, setEditingSub] = useState(null);
-  const [editingSpecialist, setEditingSpecialist] = useState(null);
   const [specForm, setSpecForm] = useState({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
-  const [editingUser, setEditingUser] = useState(null);
-  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', role_name: 'user', address: '', password: '' });
   const [deleteUserId, setDeleteUserId] = useState('');
   const [users, setUsers] = useState([]);
   // Fetch functions
@@ -113,7 +108,13 @@ const fetchUsers = async () => {
   try {
     const res = await axios.get('/api/users');
     const result = res.data;
-    const safeUsers = result?.users || (Array.isArray(result) ? result : []);
+
+    const safeUsers = Array.isArray(result)
+      ? result
+      : Object.values(result || {}).filter(v => typeof v === 'object' && v?.id);
+
+    console.log("SAFE USERS:", safeUsers);
+
     setUsers(safeUsers);
   } catch (e) {
     toast.error('Failed to fetch users');
@@ -246,43 +247,19 @@ const fetchUsers = async () => {
     }
   };
 
-  const handleEditSpecialist = (spec) => {
-    setEditingSpecialist(spec);
-    setSpecForm({
-      name: spec.name || '',
-      email: spec.email || '',
-      password: '',
-      role_name: spec.role || 'trainer',
-      phone: spec.phone || '',
-      bio: typeof spec.bio === 'string' ? spec.bio : (spec.bio?.text || '')
-    });
-  };
-
-  const handleSubmitSpecialist = async (e) => {
+  const handleAddSpec = async (e) => {
     e.preventDefault();
-    if (!specForm.name.trim() || !specForm.email.trim() || (!editingSpecialist && !specForm.password.trim())) return;
+    if (!specForm.name.trim() || !specForm.email.trim() || !specForm.password.trim()) return;
     
     try {
-      const payload = {
-        ...specForm,
-        ...(editingSpecialist ? { id: editingSpecialist.id } : {})
-      };
-      if (!payload.password) {
-        delete payload.password;
-      }
-
-      const res = editingSpecialist
-        ? await updateSpecialist(payload)
-        : await createSpecialist(payload);
-
+      const res = await createSpecialist(specForm);
       if (res.data && res.data.success) {
-        toast.success(editingSpecialist ? 'Specialist updated successfully!' : 'Specialist registered successfully!');
-        setEditingSpecialist(null);
+        toast.success('Specialist registered successfully!');
         setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
         fetchSpecialists();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || (editingSpecialist ? 'Update failed.' : 'Registration failed.'));
+      toast.error(error.response?.data?.message || 'Registration failed.');
     }
   };
 
@@ -300,73 +277,22 @@ const fetchUsers = async () => {
     }
   };
 
-  const handleEditUser = (selectedUser) => {
-    setEditingUser(selectedUser);
-    setUserForm({
-      name: selectedUser.name || '',
-      email: selectedUser.email || '',
-      phone: selectedUser.phone || '',
-      role_name: selectedUser.role_name || selectedUser.role || 'user',
-      address: selectedUser.address || '',
-      password: ''
-    });
-  };
-
-  const handleUpdateUserSubmit = async (e) => {
+  const handleDeleteUserSubmit = async (e) => {
     e.preventDefault();
-    if (!editingUser || !userForm.name.trim() || !userForm.email.trim()) return;
+    if (!deleteUserId.trim()) return;
+    if (!confirm(`Are you sure you want to delete user account ID: ${deleteUserId}?`)) return;
 
     try {
-      const payload = {
-        id: editingUser.id,
-        name: userForm.name,
-        email: userForm.email,
-        phone: userForm.phone,
-        address: userForm.address,
-        role_name: userForm.role_name
-      };
-
-      if (userForm.password.trim()) {
-        payload.password = userForm.password;
-      }
-
-      const res = await updateUser(payload);
-      if (res.data?.success) {
-        toast.success('User account updated.');
-        setEditingUser(null);
-        setUserForm({ name: '', email: '', phone: '', role_name: 'user', address: '', password: '' });
-        fetchUsers();
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update user account.');
-    }
-  };
-
-  const handleDeleteUser = async (userId) => {
-    if (!confirm(`Are you sure you want to delete user account ID: ${userId}?`)) return;
-
-    try {
-      const res = await deleteUser(Number(userId));
+      const res = await deleteUser(parseInt(deleteUserId));
       if (res.data && res.data.success) {
         toast.success('User account deleted.');
-        if (editingUser?.id === Number(userId)) {
-          setEditingUser(null);
-          setUserForm({ name: '', email: '', phone: '', role_name: 'user', address: '', password: '' });
-        }
         setDeleteUserId('');
-        fetchUsers();
       } else {
         toast.error(res.data?.message || 'Failed to delete user.');
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to delete user account.');
     }
-  };
-
-  const handleDeleteUserSubmit = async (e) => {
-    e.preventDefault();
-    if (!deleteUserId.trim()) return;
-    await handleDeleteUser(parseInt(deleteUserId));
   };
 
   return (
@@ -404,12 +330,8 @@ const fetchUsers = async () => {
                   setActiveTab(tab.id);
                   setEditingSub(null);
                   setEditingEquipment(null);
-                  setEditingSpecialist(null);
-                  setEditingUser(null);
                   setEquipmentForm({ name: '', description: '', status: 'available', booking_price: '25' });
                   setSubForm({ name: '', price: '', duration_days: '30', description: '', has_trainer: false, has_nutritionist: false, plan_type: 'both' });
-                  setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
-                  setUserForm({ name: '', email: '', phone: '', role_name: 'user', address: '', password: '' });
                 }}
                 className="btn px-4 py-2.5 fw-bold text-uppercase d-flex align-items-center gap-2 hover-lift"
                 style={{
@@ -524,16 +446,7 @@ const fetchUsers = async () => {
                           <strong className="text-white d-block">{spec.name}</strong>
                           <span className="text-secondary small d-block mt-0.5" style={{ fontSize: '0.75rem' }}>Role: <span className="text-warning text-uppercase">{spec.role}</span> | {spec.email}</span>
                         </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <button
-                            onClick={() => handleEditSpecialist(spec)}
-                            className="btn btn-sm btn-outline-warning py-1 px-2.5 fw-bold text-uppercase"
-                            style={{ fontSize: '0.65rem', borderRadius: '6px' }}
-                          >
-                            Edit
-                          </button>
-                          <button onClick={() => handleDeleteSpec(spec)} className="btn btn-link text-danger p-2 hover-lift"><Trash2 size={16} /></button>
-                        </div>
+                        <button onClick={() => handleDeleteSpec(spec)} className="btn btn-link text-danger p-2 hover-lift"><Trash2 size={16} /></button>
                       </div>
                     ))
                   )
@@ -581,7 +494,9 @@ users.map((u) => (
     <div className="d-flex gap-2">
       <button
         className="btn btn-outline-warning btn-sm"
-        onClick={() => handleEditUser(u)}
+        onClick={() => {
+          // open edit modal
+        }}
       >
         Edit
       </button>
@@ -614,15 +529,7 @@ users.map((u) => (
               }}
             >
               <h3 className="fw-black text-warning mb-4 fs-5 text-uppercase" style={{ letterSpacing: '1px' }}>
-                {editingSub
-                  ? 'Edit Subscription Plan'
-                  : editingEquipment
-                    ? 'Edit Machine'
-                    : editingSpecialist
-                      ? 'Edit Specialist'
-                      : editingUser
-                        ? 'Edit User'
-                        : 'Quick Register Form'}
+                {editingSub ? 'Edit Subscription Plan' : editingEquipment ? 'Edit Machine' : 'Quick Register Form'}
               </h3>
 
               {/* Equipment Form */}
@@ -865,7 +772,7 @@ users.map((u) => (
 
               {/* Specialists Form */}
               {activeTab === 'specialists' && (
-                <form onSubmit={handleSubmitSpecialist} className="d-flex flex-column gap-3">
+                <form onSubmit={handleAddSpec} className="d-flex flex-column gap-3">
                   <div className="form-group">
                     <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Full Name</label>
                     <input
@@ -894,9 +801,9 @@ users.map((u) => (
                       type="password"
                       value={specForm.password}
                       onChange={(e) => setSpecForm({ ...specForm, password: e.target.value })}
-                      placeholder={editingSpecialist ? 'Leave blank to keep current password' : '••••••••'}
+                      placeholder="••••••••"
                       className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      required={!editingSpecialist}
+                      required
                     />
                   </div>
                   
@@ -935,130 +842,30 @@ users.map((u) => (
                     ></textarea>
                   </div>
 
-                  <div className="d-flex gap-2 mt-3">
-                    <button type="submit" className="btn btn-warning flex-grow-1 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
-                      {editingSpecialist ? 'Update Specialist' : 'Register Specialist'}
-                    </button>
-                    {editingSpecialist && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingSpecialist(null);
-                          setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
-                        }}
-                        className="btn btn-outline-secondary fw-bold text-uppercase py-2"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
+                  <button type="submit" className="btn btn-warning mt-3 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
+                    Register Specialist
+                  </button>
                 </form>
               )}
 
               {/* Users Form */}
               {activeTab === 'users' && (
-                editingUser ? (
-                  <form onSubmit={handleUpdateUserSubmit} className="d-flex flex-column gap-3">
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Full Name</label>
-                      <input
-                        type="text"
-                        value={userForm.name}
-                        onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Email Address</label>
-                      <input
-                        type="email"
-                        value={userForm.email}
-                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        required
-                      />
-                    </div>
-                    <div className="row g-2">
-                      <div className="col-6">
-                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Phone</label>
-                        <input
-                          type="text"
-                          value={userForm.phone}
-                          onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        />
-                      </div>
-                      <div className="col-6">
-                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Role</label>
-                        <select
-                          value={userForm.role_name}
-                          onChange={(e) => setUserForm({ ...userForm, role_name: e.target.value })}
-                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        >
-                          <option value="user">User</option>
-                          <option value="trainer">Trainer</option>
-                          <option value="nutritionist">Nutritionist</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Address</label>
-                      <input
-                        type="text"
-                        value={userForm.address}
-                        onChange={(e) => setUserForm({ ...userForm, address: e.target.value })}
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">New Password</label>
-                      <input
-                        type="password"
-                        value={userForm.password}
-                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                        placeholder="Leave blank to keep current password"
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      />
-                    </div>
-                    <div className="d-flex gap-2 mt-3">
-                      <button type="submit" className="btn btn-warning flex-grow-1 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
-                        Update User
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingUser(null);
-                          setUserForm({ name: '', email: '', phone: '', role_name: 'user', address: '', password: '' });
-                        }}
-                        className="btn btn-outline-secondary fw-bold text-uppercase py-2"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={handleDeleteUserSubmit} className="d-flex flex-column gap-3">
-                    <div className="text-secondary small">
-                      Select a user from the list to edit, or delete directly by account ID below.
-                    </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Account ID</label>
-                      <input
-                        type="number"
-                        value={deleteUserId}
-                        onChange={(e) => setDeleteUserId(e.target.value)}
-                        placeholder="e.g. 42"
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        required
-                      />
-                    </div>
-                    <button type="submit" className="btn btn-danger mt-3 fw-bold text-uppercase py-2 d-flex align-items-center justify-content-center gap-2 hover-lift">
-                      <Trash2 size={16} /> Delete Account
-                    </button>
-                  </form>
-                )
+                <form onSubmit={handleDeleteUserSubmit} className="d-flex flex-column gap-3">
+                  <div className="form-group">
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Account ID</label>
+                    <input
+                      type="number"
+                      value={deleteUserId}
+                      onChange={(e) => setDeleteUserId(e.target.value)}
+                      placeholder="e.g. 42"
+                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-danger mt-3 fw-bold text-uppercase py-2 d-flex align-items-center justify-content-center gap-2 hover-lift">
+                    <Trash2 size={16} /> Delete Account
+                  </button>
+                </form>
               )}
 
             </div>

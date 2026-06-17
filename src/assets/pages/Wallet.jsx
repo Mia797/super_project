@@ -78,12 +78,12 @@ function Wallet() {
                   Available Balance
                 </span>
                 <h2 className="display-4 fw-black text-white m-0" style={{ fontWeight: 900 }}>
-                  ${parseFloat(balance).toFixed(2)}
+                  {parseFloat(balance).toFixed(0)} 🪙 Tokens
                 </h2>
               </div>
               <div className="d-flex align-items-center gap-2 text-secondary small mt-4 pt-3 border-top border-secondary border-opacity-10">
                 <CreditCard size={16} className="text-warning" />
-                <span>Default currency: USD</span>
+                <span>Default currency: Tokens</span>
               </div>
             </motion.div>
           </div>
@@ -195,7 +195,7 @@ function Wallet() {
                         </span>
                       </td>
                       <td className={`text-end py-3 px-4 fw-black ${isDebit ? 'text-danger' : 'text-success'}`} style={{ fontSize: '1rem' }}>
-                        {isDebit ? '-' : '+'}${parseFloat(tx.amount).toFixed(2)}
+                        {isDebit ? '-' : '+'}{parseFloat(tx.amount).toFixed(0)} 🪙 Tokens
                       </td>
                     </tr>
                   );

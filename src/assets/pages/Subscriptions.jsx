@@ -25,8 +25,9 @@ function Subscriptions() {
 
   const handlePurchaseClick = (plan) => {
     if (balance < parseFloat(plan.price)) {
-      toast.error(`Insufficient wallet balance. You need $${plan.price} but have $${balance}. Please fund your wallet.`);
-      navigate('/wallet');
+     toast.error(
+  `Insufficient wallet balance. You need ${plan.price * 5} Tokens but have ${balance} Tokens. Please fund your wallet.`
+);
       return;
     }
     
@@ -166,7 +167,7 @@ function Subscriptions() {
                   </p>
 
                   <div className="d-flex align-items-baseline mb-4">
-                    <span className="fs-1 fw-black text-white">${plan.price}</span>
+                    <span className="fs-1 fw-black text-white">  {(parseFloat(plan.price || 0) * 5).toFixed(0)} Tokens</span>
                     <span className="text-secondary small ms-2">/ one-time payment</span>
                   </div>
 
@@ -243,7 +244,7 @@ function Subscriptions() {
                 <div className="p-3 rounded-3" style={{ background: 'rgba(255, 122, 0, 0.05)', border: '1px solid rgba(255, 122, 0, 0.2)' }}>
                   <span className="text-secondary small text-uppercase d-block mb-1" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>Purchasing Plan</span>
                   <h5 className="text-white fw-bold mb-1">{selectedPlan.name}</h5>
-                  <span className="text-warning fw-bold">${selectedPlan.price}</span>
+                  <span className="text-warning fw-bold">{selectedPlan.price} Tokens</span>
                 </div>
 
                 <Form.Group>

@@ -164,7 +164,7 @@ function Machines() {
                         <p className={`machine-zone mb-1 fw-bold ${item.status === 'available' ? 'text-success' : 'text-danger'}`}>
                           {item.status === 'available' ? 'Available' : 'In Use'}
                         </p>
-                        <p className="text-muted small mb-0">${parseFloat(item.booking_price || 0).toFixed(2)} / hr</p>
+                        <p className="text-muted small mb-0">{(parseFloat(item.booking_price || 0) * 5).toFixed(0)}  Tokens/ hr</p>
                       </div>
                       <button
                         className="btn-premium"
@@ -225,7 +225,7 @@ function Machines() {
                   </Badge>
                   
                   <p className="fw-black mb-4" style={{ fontSize: '1.8rem', color: 'var(--accent-primary)' }}>
-                    ${parseFloat(selectedMachine.booking_price || 0).toFixed(2)} <span className="text-white opacity-50 small fw-normal">/ hour</span>
+                    {parseFloat(selectedMachine.booking_price || 0).toFixed(0)}  Tokens <span className="text-white opacity-50 small fw-normal">/ hour</span>
                   </p>
                   
                   <h5 className="fw-black text-white mb-2 text-uppercase" style={{ letterSpacing: '1px' }}>The Machine</h5>

@@ -10,7 +10,7 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -18,15 +18,35 @@ function Login() {
     setError('');
     const result = await login(email, password);
     if (result.success) {
-      const targetPath =
-        result.redirectPath ||
-        (result.user?.role === 'admin'
-          ? '/admin/dashboard'
-          : ['trainer', 'nutritionist'].includes(result.user?.role)
-            ? '/specialist/dashboard'
-            : '/profile');
-      alert('Login successful! Redirecting now...');
-      navigate(targetPath);
+      alert("Login successful! Redirecting...");
+      // Wait for user state to update
+      setTimeout(() => {
+        const storedUser = JSON.parse(window.localStorage.getItem('goldfit_auth_user') || '{}');
+        if (storedUser.role === 'trainer' || storedUser.role === 'nutritionist') {
+          navigate('/specialist/dashboard');
+        } else {
+          navigate('/profile');
+        }
+      }, 100);
+    } else {
+      setError(result.message);
+    }
+  };
+
+  const quickLogin = async (userEmail, userPassword) => {
+    setEmail(userEmail);
+    setPassword(userPassword);
+    const result = await login(userEmail, userPassword);
+    if (result.success) {
+      alert("Login successful! Redirecting...");
+      setTimeout(() => {
+        const storedUser = JSON.parse(window.localStorage.getItem('goldfit_auth_user') || '{}');
+        if (storedUser.role === 'trainer' || storedUser.role === 'nutritionist') {
+          navigate('/specialist/dashboard');
+        } else {
+          navigate('/profile');
+        }
+      }, 100);
     } else {
       setError(result.message);
     }
@@ -99,6 +119,29 @@ function Login() {
                     Authenticate
                   </Button>
                 </Form>
+
+                {/* Quick Login Buttons */}
+                <div className="mt-4 pt-3 border-top border-secondary border-opacity-20">
+                  <p className="text-muted small mb-3 text-center text-uppercase fw-bold" style={{ letterSpacing: '1px' }}>Quick Login</p>
+                  <div className="d-flex gap-2">
+                    <Button 
+                      variant="warning" 
+                      className="flex-1"
+                      style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}
+                      onClick={() => quickLogin('trainer@goldfit.local', 'password')}
+                    >
+                      Trainer
+                    </Button>
+                    <Button 
+                      variant="info" 
+                      className="flex-1"
+                      style={{ background: 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)', border: 'none', color: '#fff' }}
+                      onClick={() => quickLogin('nutritionist@goldfit.local', 'password')}
+                    >
+                      Nutritionist
+                    </Button>
+                  </div>
+                </div>
 
                 <div className="text-center mt-3">
                   <p className="text-muted small mb-0">
