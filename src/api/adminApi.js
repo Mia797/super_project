@@ -55,6 +55,14 @@ export const updateSpecialist = (specialistData) =>
 export const deleteTrainer = (userId) =>
   api.post('/trainers/delete', { user_id: Number(userId) });
 
+export const updateTrainer = (data) => {
+  return api.post('/api/trainers/update', data);
+};
+
+export const updateNutritionist = (data) => {
+  return api.post('/api/nutritionists/update', data);
+}
+
 export const deleteNutritionist = (userId) =>
   api.post('/nutritionists/delete', { user_id: Number(userId) });
 

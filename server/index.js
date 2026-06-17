@@ -1345,37 +1345,10 @@ app.post('/api/subscriptions/delete', (req, res) => {
   res.json({ success: true, message: 'Plan deleted' });
 });
 
-// AI personalised plan (any logged‑in user) – mock implementation
-app.post('/api/subscriptions/ai-plan', async (req, res) => {
+app.get('/api/subscriptions/ai-plans', (req, res) => {
   const { userId } = getUser(req);
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
-  const { goal, weight, height, age, gender, body_fat, muscle_mass, water_perc } = req.body;
-  // In a real system, forward to AI service at http://localhost:8000
-  // Here we return a static mock response
-  const mockResponse = {
-    calories: 2100,
-    protein: 158,
-    carbs: 220,
-    fat: 65,
-    plan: [
-      {
-        food: 'Chicken Breast',
-        servings: 1.5,
-        calories: 247.5,
-        protein: 46.35,
-        carbs: 0,
-        fat: 5.4
-      }
-    ],
-    workout_plan: {
-      training_days_per_week: 4,
-      cardio_minutes_per_week: 150,
-      strength_sessions: 3,
-      recommended_sets: 4,
-      recommended_reps: 12
-    }
-  };
-  res.json({ success: true, data: mockResponse });
+  res.json([]);
 });
 
 app.listen(PORT, () => {

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { getBookingIdFromResponse } from '../../api/bookingApi';
 import { Modal, Button, Badge } from 'react-bootstrap';
 import './Machines.css';
 
@@ -13,22 +14,24 @@ function Machines() {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [confirmBooking, setConfirmBooking] = useState(null);
 
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        const response = await axios.get('/api/equipment');
-        if (response.data && response.data.success && Array.isArray(response.data.equipment)) {
-          setEquipment(response.data.equipment);
-        }
-      } catch (error) {
-        console.error('Failed to fetch equipment:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchEquipment = useCallback(async (withLoader = false) => {
+    if (withLoader) setLoading(true);
 
-    fetchEquipment();
+    try {
+      const response = await axios.get('/api/equipment');
+      if (response.data && response.data.success && Array.isArray(response.data.equipment)) {
+        setEquipment(response.data.equipment);
+      }
+    } catch (error) {
+      console.error('Failed to fetch equipment:', error);
+    } finally {
+      if (withLoader) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchEquipment(true);
+  }, [fetchEquipment]);
 
   const fallbackImages = [
     'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=1470&auto=format&fit=crop',
@@ -41,6 +44,11 @@ function Machines() {
     setConfirmBooking({ equipment_id, name });
   };
 
+  const formatLocalDateTime = (date) => {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  };
+
   const confirmMachineBooking = async () => {
     if (!confirmBooking) return;
     
@@ -48,13 +56,12 @@ function Machines() {
     setBookingLoading(true);
     
     try {
-      // Format: YYYY-MM-DD HH:MM:SS
-      const start_time = `${bookingDate} ${bookingTime}:00`;
-      
-      // Calculate end time (1 hour duration)
-      const startObj = new Date(`${bookingDate}T${bookingTime}`);
-      const endObj = new Date(startObj.getTime() + 60 * 60 * 1000);
-      const end_time = endObj.toISOString().slice(0, 19).replace('T', ' ');
+      const startObj = new Date(`${bookingDate}T${bookingTime}:00`);
+      const endObj = new Date(startObj);
+      endObj.setDate(endObj.getDate() + 1);
+
+      const start_time = formatLocalDateTime(startObj);
+      const end_time = formatLocalDateTime(endObj);
 
       const response = await axios.post('/api/bookings/create', {
         equipment_id,
@@ -69,7 +76,9 @@ function Machines() {
         
         if (!bookedMachinesData.find(m => m.id === equipment_id)) {
           bookedMachinesData.push({ 
-            id: equipment_id, 
+            booking_id: getBookingIdFromResponse(response.data),
+            equipment_id: equipment_id,
+            id: equipment_id,
             name: name,
             image_url: machine?.image_url,
             bookingTime: start_time,
@@ -80,6 +89,7 @@ function Machines() {
         
         setSelectedMachine(null);
         setConfirmBooking(null);
+        await fetchEquipment();
       }
     } catch (error) {
       console.error('Booking error:', error);

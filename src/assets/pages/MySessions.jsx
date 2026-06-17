@@ -4,6 +4,7 @@ import { Calendar, Clock, Dumbbell, Apple, Trash2, Edit2, User, ChevronRight, Al
 import { Modal, Button, Form, Badge } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { cancelBooking, getAllBookings, mapMachineBooking, normalizeBookings } from '../../api/bookingApi';
 import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../context/SubscriptionContext';
 
@@ -58,7 +59,70 @@ function MySessions() {
   const [bookedTrainers, setBookedTrainers] = useState([]);
   const [bookedNutritionists, setBookedNutritionists] = useState([]);
   const [bookedMachines, setBookedMachines] = useState([]);
+  const [cancellingMachineId, setCancellingMachineId] = useState(null);
   const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' | 'past'
+
+  const fetchBookedMachines = async () => {
+    try {
+      const response = await getAllBookings();
+      const bookings = normalizeBookings(response.data);
+
+      const machineBookings = bookings
+        .filter((booking) => booking.status?.toLowerCase() !== 'cancelled')
+        .map(mapMachineBooking)
+        .filter((booking) => booking.booking_id);
+
+      setBookedMachines(machineBookings);
+      localStorage.setItem('bookedMachines', JSON.stringify(machineBookings));
+      return machineBookings;
+    } catch (error) {
+      console.error('Failed to fetch booked machines:', error);
+      const stored = JSON.parse(localStorage.getItem('bookedMachines') || '[]');
+      setBookedMachines(stored);
+      return stored;
+    }
+  };
+
+  const resolveBookingId = async (machine) => {
+    if (machine.booking_id) return machine.booking_id;
+
+    const refreshed = await fetchBookedMachines();
+    const equipmentId = machine.equipment_id ?? machine.id;
+    const match = refreshed.find(
+      (booking) =>
+        String(booking.equipment_id) === String(equipmentId) ||
+        booking.name === machine.name
+    );
+
+    return match?.booking_id || null;
+  };
+
+  const handleCancelMachineBooking = async (machine) => {
+    if (!window.confirm(`Are you sure you want to cancel your booking for ${machine.name}?`)) {
+      return;
+    }
+
+    const bookingId = await resolveBookingId(machine);
+    if (!bookingId) {
+      toast.error('Booking ID not found. Unable to cancel.');
+      return;
+    }
+
+    setCancellingMachineId(bookingId);
+    try {
+      const response = await cancelBooking(bookingId);
+      if (response.data?.success) {
+        toast.success(response.data.message || `Cancelled booking for ${machine.name}`);
+        await fetchBookedMachines();
+      } else {
+        toast.error(response.data?.message || 'Failed to cancel booking.');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.response?.data?.error || 'Failed to cancel booking.');
+    } finally {
+      setCancellingMachineId(null);
+    }
+  };
 
   // Reschedule Modal State
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -87,7 +151,7 @@ function MySessions() {
     // Load specialists
     setBookedTrainers(JSON.parse(localStorage.getItem('bookedTrainers') || '[]'));
     setBookedNutritionists(JSON.parse(localStorage.getItem('bookedNutritionists') || '[]'));
-    setBookedMachines(JSON.parse(localStorage.getItem('bookedMachines') || '[]'));
+    fetchBookedMachines();
 
     fetchMySubs();
   }, [user]);
@@ -452,7 +516,7 @@ function MySessions() {
           ) : (
             <div className="row g-3">
               {bookedMachines.map((machine, idx) => (
-                <div key={machine.id || idx} className="col-12 col-md-6">
+                <div key={machine.booking_id || machine.equipment_id || machine.id || idx} className="col-12 col-md-6">
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -488,16 +552,13 @@ function MySessions() {
                         </div>
                         <div className="d-flex gap-2 mt-3">
                           <button
-                            onClick={() => {
-                              const updated = bookedMachines.filter(m => m.id !== machine.id);
-                              setBookedMachines(updated);
-                              localStorage.setItem('bookedMachines', JSON.stringify(updated));
-                              toast.success(`Cancelled booking for ${machine.name}`);
-                            }}
+                            onClick={() => handleCancelMachineBooking(machine)}
+                            disabled={cancellingMachineId === machine.booking_id}
                             className="btn btn-outline-danger btn-sm px-3 py-1"
                             style={{ borderRadius: '6px', fontSize: '0.7rem' }}
                           >
-                            <Trash2 size={12} className="me-1" /> Cancel
+                            <Trash2 size={12} className="me-1" />
+                            {cancellingMachineId === machine.booking_id ? 'Cancelling...' : 'Cancel'}
                           </button>
                           <button
                             onClick={() => navigate('/machines')}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Hammer, ClipboardList, UserCheck, Users, Plus, Trash2, ArrowLeft } from 'lucide-react';
@@ -21,7 +22,7 @@ import { toast } from 'react-toastify';
 function AdminManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+ 
   const [activeTab, setActiveTab] = useState('equipment');
   const [loading, setLoading] = useState(false);
 
@@ -29,15 +30,17 @@ function AdminManagement() {
   const [equipments, setEquipments] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [specialists, setSpecialists] = useState([]);
-  
+ 
   // Forms state
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [equipmentForm, setEquipmentForm] = useState({ name: '', description: '', status: 'available', booking_price: '25' });
   const [subForm, setSubForm] = useState({ name: '', price: '', duration_days: '30', description: '', has_trainer: false, has_nutritionist: false, plan_type: 'both' });
   const [editingSub, setEditingSub] = useState(null);
   const [specForm, setSpecForm] = useState({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+  const [editingSpec, setEditingSpec] = useState(null); // Added state to track currently edited specialist
   const [deleteUserId, setDeleteUserId] = useState('');
   const [users, setUsers] = useState([]);
+
   // Fetch functions
   const fetchEquipments = async () => {
     setLoading(true);
@@ -74,10 +77,10 @@ function AdminManagement() {
     try {
       const trainersRes = await axios.get('/api/trainers');
       const nutritionistsRes = await axios.get('/api/nutritionists');
-      
+     
       const trainersList = (trainersRes.data?.trainers || []).map(t => ({ ...t, role: 'trainer' }));
       const nutritionistsList = (nutritionistsRes.data?.nutritionists || []).map(n => ({ ...n, role: 'nutritionist' }));
-      
+     
       setSpecialists([...trainersList, ...nutritionistsList]);
     } catch (e) {
       console.error(e);
@@ -87,42 +90,44 @@ function AdminManagement() {
     }
   };
 
-useEffect(() => {
-  if (!user || user.role !== 'admin') return;
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get('/api/users');
+      const result = res.data;
 
-  const loadData = async () => {
-    if (activeTab === 'equipment') await fetchEquipments();
-    if (activeTab === 'packages') await fetchSubscriptions();
-    if (activeTab === 'specialists') await fetchSpecialists();
-    if (activeTab === 'users') await fetchUsers();
+      const safeUsers = Array.isArray(result)
+        ? result
+        : Object.values(result || {}).filter(v => typeof v === 'object' && v?.id);
+
+      console.log("SAFE USERS:", safeUsers);
+
+      setUsers(safeUsers);
+    } catch (e) {
+      toast.error('Failed to fetch users');
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  loadData();
-}, [user, activeTab]);
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+
+    const loadData = async () => {
+      if (activeTab === 'equipment') await fetchEquipments();
+      if (activeTab === 'packages') await fetchSubscriptions();
+      if (activeTab === 'specialists') await fetchSpecialists();
+      if (activeTab === 'users') await fetchUsers();
+    };
+
+    loadData();
+  }, [user, activeTab]);
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" />;
   }
-const fetchUsers = async () => {
-  setLoading(true);
-  try {
-    const res = await axios.get('/api/users');
-    const result = res.data;
 
-    const safeUsers = Array.isArray(result)
-      ? result
-      : Object.values(result || {}).filter(v => typeof v === 'object' && v?.id);
-
-    console.log("SAFE USERS:", safeUsers);
-
-    setUsers(safeUsers);
-  } catch (e) {
-    toast.error('Failed to fetch users');
-    setUsers([]);
-  } finally {
-    setLoading(false);
-  }
-};
   // Handle submits
   const handleAddEquipment = async (e) => {
     e.preventDefault();
@@ -175,7 +180,7 @@ const fetchUsers = async () => {
   const handleAddSub = async (e) => {
     e.preventDefault();
     if (!subForm.name.trim() || !subForm.price) return;
-    
+   
     try {
       const planType =
         subForm.plan_type ||
@@ -196,7 +201,7 @@ const fetchUsers = async () => {
         has_trainer: subForm.has_trainer ? 1 : 0,
         has_nutritionist: subForm.has_nutritionist ? 1 : 0
       };
-      
+     
       const res = await createSubscriptionPlan(payload);
       if (res.data && res.data.success) {
         toast.success('Subscription plan created!');
@@ -211,7 +216,7 @@ const fetchUsers = async () => {
   const handleUpdateSub = async (e) => {
     e.preventDefault();
     if (!subForm.name.trim() || !subForm.price || !editingSub) return;
-    
+   
     try {
       const payload = {
         id: editingSub.id,
@@ -221,7 +226,7 @@ const fetchUsers = async () => {
         description: subForm.description,
         plan_type: subForm.plan_type || 'both'
       };
-      
+     
       const res = await updateSubscription(payload);
       if (res.data && res.data.success) {
         toast.success('Subscription plan updated!');
@@ -249,18 +254,52 @@ const fetchUsers = async () => {
 
   const handleAddSpec = async (e) => {
     e.preventDefault();
-    if (!specForm.name.trim() || !specForm.email.trim() || !specForm.password.trim()) return;
-    
+    if (!specForm.name.trim() || !specForm.email.trim() || (!editingSpec && !specForm.password.trim())) return;
+   
     try {
-      const res = await createSpecialist(specForm);
-      if (res.data && res.data.success) {
-        toast.success('Specialist registered successfully!');
-        setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
-        fetchSpecialists();
+      if (editingSpec) {
+        if (specForm.role_name === 'trainer') {
+          // Triggers the requested functionality
+          const payload = {
+            id: editingSpec.id,
+            name: specForm.name,
+            email: specForm.email,
+            phone: specForm.phone,
+            bio: specForm.bio
+          };
+          const res = await axios.post('/api/trainers/update', payload);
+          if (res.data && res.data.success) {
+            toast.success('Trainer updated successfully!');
+            setEditingSpec(null);
+            setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+            fetchSpecialists();
+          }
+        } else {
+          toast.error('Update operation currently only optimized for Trainers via this route.');
+        }
+      } else {
+        const res = await createSpecialist(specForm);
+        if (res.data && res.data.success) {
+          toast.success('Specialist registered successfully!');
+          setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+          fetchSpecialists();
+        }
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed.');
+      toast.error(error.response?.data?.message || 'Operation failed.');
     }
+  };
+
+  const handleEditSpec = (spec) => {
+    setEditingSpec(spec);
+    setSpecForm({
+      name: spec.name || '',
+      email: spec.email || '',
+      password: '', // Kept empty for security during updates
+      role_name: spec.role || 'trainer',
+      phone: spec.phone || '',
+      bio: spec.bio || ''
+    });
   };
 
   const handleDeleteSpec = async (spec) => {
@@ -287,6 +326,7 @@ const fetchUsers = async () => {
       if (res.data && res.data.success) {
         toast.success('User account deleted.');
         setDeleteUserId('');
+        fetchUsers();
       } else {
         toast.error(res.data?.message || 'Failed to delete user.');
       }
@@ -295,10 +335,23 @@ const fetchUsers = async () => {
     }
   };
 
+  const handleDeleteUser = async (id) => {
+    if (!confirm(`Are you sure you want to delete user account ID: ${id}?`)) return;
+    try {
+      const res = await deleteUser(id);
+      if (res.data && res.data.success) {
+        toast.success('User account deleted.');
+        fetchUsers();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete user.');
+    }
+  };
+
   return (
     <div className="profile-container text-white py-5 px-3 min-vh-100" style={{ background: '#0a0a0a' }}>
       <div className="max-width-lg mx-auto" style={{ maxWidth: '1050px' }}>
-        
+       
         {/* Header */}
         <div className="d-flex align-items-center gap-3 mb-5 border-bottom border-secondary border-opacity-15 pb-4">
           <button
@@ -330,15 +383,17 @@ const fetchUsers = async () => {
                   setActiveTab(tab.id);
                   setEditingSub(null);
                   setEditingEquipment(null);
+                  setEditingSpec(null);
                   setEquipmentForm({ name: '', description: '', status: 'available', booking_price: '25' });
                   setSubForm({ name: '', price: '', duration_days: '30', description: '', has_trainer: false, has_nutritionist: false, plan_type: 'both' });
+                  setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
                 }}
                 className="btn px-4 py-2.5 fw-bold text-uppercase d-flex align-items-center gap-2 hover-lift"
                 style={{
                   borderRadius: '10px',
                   fontSize: '0.75rem',
-                  background: isSelected 
-                    ? 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)' 
+                  background: isSelected
+                    ? 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)'
                     : 'rgba(255, 255, 255, 0.03)',
                   color: isSelected ? '#000' : '#fff',
                   border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -354,7 +409,7 @@ const fetchUsers = async () => {
 
         {/* Tab Contents */}
         <div className="row g-4">
-          
+         
           {/* Active Tab Lists */}
           <div className="col-12 col-lg-7">
             <h3 className="fw-black text-white mb-4 fs-5 text-uppercase" style={{ letterSpacing: '1px' }}>
@@ -367,7 +422,7 @@ const fetchUsers = async () => {
               </div>
             ) : (
               <div className="d-flex flex-column gap-3">
-                
+               
                 {/* Equipment List */}
                 {activeTab === 'equipment' && (
                   equipments.length === 0 ? (
@@ -409,9 +464,9 @@ const fetchUsers = async () => {
                           <button
                             onClick={() => {
                               setEditingSub(sub);
-                              const pType = sub.plan_type || 
-                                            ((sub.has_trainer && sub.has_nutritionist) ? 'both' : 
-                                             sub.has_trainer ? 'gym' : 
+                              const pType = sub.plan_type ||
+                                            ((sub.has_trainer && sub.has_nutritionist) ? 'both' :
+                                             sub.has_trainer ? 'gym' :
                                              sub.has_nutritionist ? 'diet' : 'both');
                               setSubForm({
                                 name: sub.name,
@@ -446,7 +501,18 @@ const fetchUsers = async () => {
                           <strong className="text-white d-block">{spec.name}</strong>
                           <span className="text-secondary small d-block mt-0.5" style={{ fontSize: '0.75rem' }}>Role: <span className="text-warning text-uppercase">{spec.role}</span> | {spec.email}</span>
                         </div>
-                        <button onClick={() => handleDeleteSpec(spec)} className="btn btn-link text-danger p-2 hover-lift"><Trash2 size={16} /></button>
+                        <div className="d-flex align-items-center gap-2">
+                          {spec.role === 'trainer' && (
+                            <button
+                              onClick={() => handleEditSpec(spec)}
+                              className="btn btn-sm btn-outline-warning py-1 px-2.5 fw-bold text-uppercase"
+                              style={{ fontSize: '0.65rem', borderRadius: '6px' }}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          <button onClick={() => handleDeleteSpec(spec)} className="btn btn-link text-danger p-2 hover-lift"><Trash2 size={16} /></button>
+                        </div>
                       </div>
                     ))
                   )
@@ -454,71 +520,66 @@ const fetchUsers = async () => {
 
                 {/* Users List Information */}
                 {activeTab === 'users' && (
-  users.length === 0 ? (
-    <div className="text-center py-4 text-secondary">
-      No users found
-    </div>
-  ) : (
-users.map((u) => (
-  <div
-    key={u.id}
-    className="p-3 d-flex justify-content-between align-items-center"
-    style={{
-      background: 'rgba(25,25,25,0.4)',
-      border: '1px solid rgba(255,255,255,0.05)',
-      borderRadius: '10px'
-    }}
-  >
-    <div>
-      <strong className="text-white d-block">
-        {u.name}
-      </strong>
+                  users.length === 0 ? (
+                    <div className="text-center py-4 text-secondary">
+                      No users found
+                    </div>
+                  ) : (
+                    users.map((u) => (
+                      <div
+                        key={u.id}
+                        className="p-3 d-flex justify-content-between align-items-center"
+                        style={{
+                          background: 'rgba(25,25,25,0.4)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          borderRadius: '10px'
+                        }}
+                      >
+                        <div>
+                          <strong className="text-white d-block">
+                            {u.name}
+                          </strong>
+                          <span className="text-secondary small d-block">
+                            Email: {u.email}
+                          </span>
+                          <span className="text-info small d-block">
+                            ID: {u.id}
+                          </span>
+                          <span className="text-success small d-block">
+                            Phone: {u.phone || 'N/A'}
+                          </span>
+                          <span className="text-warning small d-block text-uppercase">
+                            Role: {u.role_name || u.role}
+                          </span>
+                        </div>
 
-      <span className="text-secondary small d-block">
-        Email: {u.email}
-      </span>
+                        <div className="d-flex gap-2">
+                          <button
+                            className="btn btn-outline-warning btn-sm"
+                            onClick={() => {
+                              // open edit modal or map fields
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteUser(u.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )
+                )}
+              </div>
+            )}
+          </div>
 
-      <span className="text-info small d-block">
-        ID: {u.id}
-      </span>
-
-      <span className="text-success small d-block">
-        Phone: {u.phone || 'N/A'}
-      </span>
-
-      <span className="text-warning small d-block text-uppercase">
-        Role: {u.role_name || u.role}
-      </span>
-    </div>
-
-    <div className="d-flex gap-2">
-      <button
-        className="btn btn-outline-warning btn-sm"
-        onClick={() => {
-          // open edit modal
-        }}
-      >
-        Edit
-      </button>
-
-      <button
-        className="btn btn-danger btn-sm"
-        onClick={() => handleDeleteUser(u.id)}
-      >
-        Delete
-      </button>
-    </div>
-  </div>
-))
-  )
-)}
-</div>
-)}
-</div>
-
-{/* Form Actions (Right Pane) */}
+          {/* Form Actions (Right Pane) */}
           <div className="col-12 col-lg-5">
-            <div 
+            <div
               className="p-4"
               style={{
                 background: 'rgba(20, 20, 20, 0.75)',
@@ -529,7 +590,7 @@ users.map((u) => (
               }}
             >
               <h3 className="fw-black text-warning mb-4 fs-5 text-uppercase" style={{ letterSpacing: '1px' }}>
-                {editingSub ? 'Edit Subscription Plan' : editingEquipment ? 'Edit Machine' : 'Quick Register Form'}
+                {editingSub ? 'Edit Subscription Plan' : editingEquipment ? 'Edit Machine' : editingSpec ? 'Edit Specialist' : 'Quick Register Form'}
               </h3>
 
               {/* Equipment Form */}
@@ -603,8 +664,8 @@ users.map((u) => (
 
               {/* Subscription Packages Form */}
               {activeTab === 'packages' && (
-                editingSub ? (
-                  <form onSubmit={handleUpdateSub} className="d-flex flex-column gap-3">
+                <form onSubmit={editingSub ? handleUpdateSub : handleAddSub} className="d-flex flex-column gap-3">
+                  {editingSub && (
                     <div className="form-group">
                       <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Plan ID (Editing)</label>
                       <input
@@ -614,70 +675,72 @@ users.map((u) => (
                         className="form-control text-white-50 bg-black bg-opacity-60 border border-secondary border-opacity-10"
                       />
                     </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Plan Name</label>
+                  )}
+                  <div className="form-group">
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Plan Name</label>
+                    <input
+                      type="text"
+                      value={subForm.name}
+                      onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
+                      placeholder="e.g. VIP Gladiator"
+                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                      required
+                    />
+                  </div>
+                  <div className="row g-2">
+                    <div className="col-6">
+                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Price ($)</label>
                       <input
-                        type="text"
-                        value={subForm.name}
-                        onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
-                        placeholder="e.g. VIP Gladiator"
+                        type="number"
+                        step="0.01"
+                        value={subForm.price}
+                        onChange={(e) => setSubForm({ ...subForm, price: e.target.value })}
+                        placeholder="e.g. 99.99"
                         className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
                         required
                       />
                     </div>
-                    <div className="row g-2">
-                      <div className="col-6">
-                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Price ($)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={subForm.price}
-                          onChange={(e) => setSubForm({ ...subForm, price: e.target.value })}
-                          placeholder="e.g. 99.99"
-                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                          required
-                        />
-                      </div>
-                      <div className="col-6">
-                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Duration (Days)</label>
-                        <input
-                          type="number"
-                          value={subForm.duration_days}
-                          onChange={(e) => setSubForm({ ...subForm, duration_days: e.target.value })}
-                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Plan Type</label>
-                      <select
-                        value={subForm.plan_type || 'both'}
-                        onChange={(e) => setSubForm({ ...subForm, plan_type: e.target.value })}
+                    <div className="col-6">
+                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Duration (Days)</label>
+                      <input
+                        type="number"
+                        value={subForm.duration_days}
+                        onChange={(e) => setSubForm({ ...subForm, duration_days: e.target.value })}
                         className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      >
-                        <option value="both">Both (Gym + Diet)</option>
-                        <option value="gym">Gym Only</option>
-                        <option value="diet">Diet Only</option>
-                      </select>
+                        required
+                      />
                     </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Description</label>
-                      <textarea
-                        value={subForm.description}
-                        onChange={(e) => setSubForm({ ...subForm, description: e.target.value })}
-                        placeholder="List privileges of the membership plan..."
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        rows="3"
-                      ></textarea>
-                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Plan Type</label>
+                    <select
+                      value={subForm.plan_type || 'both'}
+                      onChange={(e) => setSubForm({ ...subForm, plan_type: e.target.value })}
+                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                    >
+                      <option value="both">Both (Gym + Diet)</option>
+                      <option value="gym">Gym Only</option>
+                      <option value="diet">Diet Only</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Description</label>
+                    <textarea
+                      value={subForm.description}
+                      onChange={(e) => setSubForm({ ...subForm, description: e.target.value })}
+                      placeholder="List privileges of the membership plan..."
+                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                      rows="3"
+                    ></textarea>
+                  </div>
 
-                    <div className="d-flex gap-2 mt-3">
-                      <button type="submit" className="btn btn-warning flex-grow-1 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
-                        Update Package
-                      </button>
-                      <button 
-                        type="button" 
+                  <div className="d-flex gap-2 mt-3">
+                    <button type="submit" className="btn btn-warning flex-grow-1 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
+                      {editingSub ? 'Update Package' : 'Create Package'}
+                    </button>
+                    {editingSub && (
+                      <button
+                        type="button"
                         onClick={() => {
                           setEditingSub(null);
                           setSubForm({ name: '', price: '', duration_days: '30', description: '', has_trainer: false, has_nutritionist: false, plan_type: 'both' });
@@ -686,184 +749,111 @@ users.map((u) => (
                       >
                         Cancel
                       </button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={handleAddSub} className="d-flex flex-column gap-3">
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Plan Name</label>
-                      <input
-                        type="text"
-                        value={subForm.name}
-                        onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
-                        placeholder="e.g. VIP Gladiator"
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        required
-                      />
-                    </div>
-                    <div className="row g-2">
-                      <div className="col-6">
-                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Price ($)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={subForm.price}
-                          onChange={(e) => setSubForm({ ...subForm, price: e.target.value })}
-                          placeholder="e.g. 99.99"
-                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                          required
-                        />
-                      </div>
-                      <div className="col-6">
-                        <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Duration (Days)</label>
-                        <input
-                          type="number"
-                          value={subForm.duration_days}
-                          onChange={(e) => setSubForm({ ...subForm, duration_days: e.target.value })}
-                          className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Description</label>
-                      <textarea
-                        value={subForm.description}
-                        onChange={(e) => setSubForm({ ...subForm, description: e.target.value })}
-                        placeholder="List privileges of the membership plan..."
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                        rows="3"
-                      ></textarea>
-                    </div>
-                    
-                    <div className="d-flex flex-column gap-2 mt-2">
-                      <div className="form-check">
-                        <input
-                          type="checkbox"
-                          checked={subForm.has_trainer}
-                          onChange={(e) => setSubForm({ ...subForm, has_trainer: e.target.checked })}
-                          className="form-check-input"
-                          id="checkTrainer"
-                        />
-                        <label className="form-check-label small text-white" htmlFor="checkTrainer">
-                          Requires Trainer Assignment
-                        </label>
-                      </div>
-                      <div className="form-check">
-                        <input
-                          type="checkbox"
-                          checked={subForm.has_nutritionist}
-                          onChange={(e) => setSubForm({ ...subForm, has_nutritionist: e.target.checked })}
-                          className="form-check-input"
-                          id="checkNutritionist"
-                        />
-                        <label className="form-check-label small text-white" htmlFor="checkNutritionist">
-                          Requires Nutritionist Assignment
-                        </label>
-                      </div>
-                    </div>
-
-                    <button type="submit" className="btn btn-warning mt-3 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
-                      Publish Package
-                    </button>
-                  </form>
-                )
+                    )}
+                  </div>
+                </form>
               )}
 
               {/* Specialists Form */}
               {activeTab === 'specialists' && (
                 <form onSubmit={handleAddSpec} className="d-flex flex-column gap-3">
                   <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Full Name</label>
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Name</label>
                     <input
                       type="text"
                       value={specForm.name}
                       onChange={(e) => setSpecForm({ ...specForm, name: e.target.value })}
-                      placeholder="e.g. Master Coach Arnold"
                       className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Email Address</label>
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Email</label>
                     <input
                       type="email"
                       value={specForm.email}
                       onChange={(e) => setSpecForm({ ...specForm, email: e.target.value })}
-                      placeholder="e.g. arnold@goldfit.com"
                       className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
                       required
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Access Password</label>
-                    <input
-                      type="password"
-                      value={specForm.password}
-                      onChange={(e) => setSpecForm({ ...specForm, password: e.target.value })}
-                      placeholder="••••••••"
-                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="row g-2">
-                    <div className="col-6">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Specialty</label>
-                      <select
-                        value={specForm.role_name}
-                        onChange={(e) => setSpecForm({ ...specForm, role_name: e.target.value })}
-                        className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      >
-                        <option value="trainer">Trainer</option>
-                        <option value="nutritionist">Nutritionist</option>
-                      </select>
-                    </div>
-                    <div className="col-6">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Phone</label>
+                  {!editingSpec && (
+                    <div className="form-group">
+                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Password</label>
                       <input
-                        type="text"
-                        value={specForm.phone}
-                        onChange={(e) => setSpecForm({ ...specForm, phone: e.target.value })}
-                        placeholder="e.g. 555-0199"
+                        type="password"
+                        value={specForm.password}
+                        onChange={(e) => setSpecForm({ ...specForm, password: e.target.value })}
                         className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                        required
                       />
                     </div>
-                  </div>
-
+                  )}
                   <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Bio / Qualifications</label>
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Role</label>
+                    <select
+                      value={specForm.role_name}
+                      onChange={(e) => setSpecForm({ ...specForm, role_name: e.target.value })}
+                      disabled={!!editingSpec}
+                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                    >
+                      <option value="trainer">Trainer</option>
+                      <option value="nutritionist">Nutritionist</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Phone</label>
+                    <input
+                      type="text"
+                      value={specForm.phone}
+                      onChange={(e) => setSpecForm({ ...specForm, phone: e.target.value })}
+                      className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Bio</label>
                     <textarea
                       value={specForm.bio}
                       onChange={(e) => setSpecForm({ ...specForm, bio: e.target.value })}
-                      placeholder="e.g. IFBB Professional Bodybuilder with 10 years experience"
                       className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      rows="2"
+                      rows="3"
                     ></textarea>
                   </div>
-
-                  <button type="submit" className="btn btn-warning mt-3 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
-                    Register Specialist
-                  </button>
+                  <div className="d-flex gap-2 mt-3">
+                    <button type="submit" className="btn btn-warning flex-grow-1 fw-bold text-uppercase py-2" style={{ background: 'linear-gradient(135deg, #ff7a00 0%, #ff4400 100%)', border: 'none', color: '#000' }}>
+                      {editingSpec ? 'Update Specialist' : 'Register Specialist'}
+                    </button>
+                    {editingSpec && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSpec(null);
+                          setSpecForm({ name: '', email: '', password: '', role_name: 'trainer', phone: '', bio: '' });
+                        }}
+                        className="btn btn-outline-secondary fw-bold text-uppercase py-2"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </form>
               )}
 
-              {/* Users Form */}
+              {/* Users Form Operations */}
               {activeTab === 'users' && (
                 <form onSubmit={handleDeleteUserSubmit} className="d-flex flex-column gap-3">
                   <div className="form-group">
-                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Account ID</label>
+                    <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Target Account ID</label>
                     <input
-                      type="number"
+                      type="text"
                       value={deleteUserId}
                       onChange={(e) => setDeleteUserId(e.target.value)}
-                      placeholder="e.g. 42"
+                      placeholder="Enter user account ID"
                       className="form-control text-white bg-black bg-opacity-40 border border-secondary border-opacity-25"
-                      required
                     />
                   </div>
-                  <button type="submit" className="btn btn-danger mt-3 fw-bold text-uppercase py-2 d-flex align-items-center justify-content-center gap-2 hover-lift">
-                    <Trash2 size={16} /> Delete Account
+                  <button type="submit" className="btn btn-danger w-100 fw-bold text-uppercase py-2 mt-3">
+                    Purge Account
                   </button>
                 </form>
               )}
@@ -872,7 +862,6 @@ users.map((u) => (
           </div>
 
         </div>
-
       </div>
     </div>
   );
