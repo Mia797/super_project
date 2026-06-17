@@ -1,17 +1,52 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, Dumbbell, Apple, Trash2, Edit2, User, ChevronRight, AlertCircle, Compass, Sparkles, CheckCircle2, TrendingUp, Activity, Shield } from 'lucide-react';
 import { Modal, Button, Form, Badge } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { cancelBooking, getAllBookings, mapMachineBooking, normalizeBookings } from '../../api/bookingApi';
+import { getTrainingPlans, normalizeTrainingPlans } from '../../api/trainingPlanApi';
+import { getNutritionPlans, normalizeNutritionPlans } from '../../api/nutritionPlanApi';
 import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../context/SubscriptionContext';
-import {
-  extractAssignedTrainers,
-  extractAssignedNutritionists,
-  clearLegacySpecialistStorage
-} from '../../utils/assignedSpecialists';
+import { clearLegacySpecialistStorage } from '../../utils/assignedSpecialists';
+
+const TRAINER_AVATAR =
+  'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop';
+const NUTRITIONIST_AVATAR =
+  'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1453&auto=format&fit=crop';
+
+const uniqueTrainersFromPlans = (plans = []) => {
+  const map = new Map();
+  plans.forEach((plan) => {
+    if (!plan.trainer_id || !plan.trainer_name) return;
+    const id = Number(plan.trainer_id);
+    if (!map.has(id)) {
+      map.set(id, {
+        id,
+        name: plan.trainer_name,
+        image_url: plan.trainer_image_url || plan.image_url || TRAINER_AVATAR
+      });
+    }
+  });
+  return Array.from(map.values());
+};
+
+const uniqueNutritionistsFromPlans = (plans = []) => {
+  const map = new Map();
+  plans.forEach((plan) => {
+    if (!plan.nutritionist_id || !plan.nutritionist_name) return;
+    const id = Number(plan.nutritionist_id);
+    if (!map.has(id)) {
+      map.set(id, {
+        id,
+        name: plan.nutritionist_name,
+        image_url: plan.nutritionist_image_url || plan.image_url || NUTRITIONIST_AVATAR
+      });
+    }
+  });
+  return Array.from(map.values());
+};
 
 // Default Sample Scheduled Sessions to show if localStorage is empty
 const SAMPLE_SESSIONS = [
@@ -62,11 +97,31 @@ function MySessions() {
   // State
   const [scheduledSessions, setScheduledSessions] = useState([]);
   const [bookedMachines, setBookedMachines] = useState([]);
+  const [assignedTrainers, setAssignedTrainers] = useState([]);
+  const [assignedNutritionists, setAssignedNutritionists] = useState([]);
+  const [specialistsLoading, setSpecialistsLoading] = useState(true);
   const [cancellingMachineId, setCancellingMachineId] = useState(null);
   const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' | 'past'
 
-  const assignedTrainers = useMemo(() => extractAssignedTrainers(mySubs), [mySubs]);
-  const assignedNutritionists = useMemo(() => extractAssignedNutritionists(mySubs), [mySubs]);
+  const assignedSpecialistCount = assignedTrainers.length + assignedNutritionists.length;
+
+  const fetchAssignedSpecialists = async () => {
+    setSpecialistsLoading(true);
+    try {
+      const [trainingRes, nutritionRes] = await Promise.all([
+        getTrainingPlans(),
+        getNutritionPlans()
+      ]);
+      setAssignedTrainers(uniqueTrainersFromPlans(normalizeTrainingPlans(trainingRes.data)));
+      setAssignedNutritionists(uniqueNutritionistsFromPlans(normalizeNutritionPlans(nutritionRes.data)));
+    } catch (error) {
+      console.error('Failed to fetch assigned specialists:', error);
+      setAssignedTrainers([]);
+      setAssignedNutritionists([]);
+    } finally {
+      setSpecialistsLoading(false);
+    }
+  };
 
   const fetchBookedMachines = async () => {
     try {
@@ -155,6 +210,7 @@ function MySessions() {
     setScheduledSessions(storedSessions);
     clearLegacySpecialistStorage();
     fetchBookedMachines();
+    fetchAssignedSpecialists();
 
     fetchMySubs();
   }, [user]);
@@ -328,7 +384,7 @@ function MySessions() {
           <div className="col-6 col-md-2">
             <div className="p-3 rounded-3 border border-secondary border-opacity-10 text-center" style={{ background: 'rgba(255,255,255,0.01)' }}>
               <span className="text-secondary small text-uppercase d-block mb-1" style={{ fontSize: '0.6rem', letterSpacing: '0.5px' }}>Specialists</span>
-              <span className="fs-3 fw-black text-info">{assignedTrainers.length + assignedNutritionists.length}</span>
+              <span className="fs-3 fw-black text-info">{assignedSpecialistCount}</span>
             </div>
           </div>
         </div>
@@ -585,75 +641,75 @@ function MySessions() {
           <h3 className="fw-black mb-4 d-flex align-items-center gap-2 text-uppercase fs-5" style={{ letterSpacing: '1px' }}>
             🤝 My Assigned Gym Specialists
           </h3>
-          
-          {assignedTrainers.length === 0 && assignedNutritionists.length === 0 ? (
+
+          {specialistsLoading ? (
+            <div className="text-center py-4">
+              <div className="spinner-border spinner-border-sm text-warning" role="status" />
+            </div>
+          ) : assignedSpecialistCount === 0 ? (
             <div className="p-4 rounded-4 border border-secondary border-opacity-10 text-center" style={{ background: 'rgba(255,255,255,0.01)' }}>
-              <p className="text-secondary small mb-3">You do not have any assigned elite trainers or nutritionists yet.</p>
+              <p className="text-secondary small mb-3">You do not have any assigned trainers or nutritionists yet.</p>
               <div className="d-flex justify-content-center gap-3">
                 <button onClick={() => navigate('/trainers')} className="btn btn-outline-warning btn-sm fw-bold text-uppercase py-2 px-3" style={{ borderRadius: '8px', fontSize: '0.72rem' }}>
-                  Meet Trainers
+                  Book a Trainer
                 </button>
                 <button onClick={() => navigate('/nutritionists')} className="btn btn-outline-success btn-sm fw-bold text-uppercase py-2 px-3" style={{ borderRadius: '8px', fontSize: '0.72rem' }}>
-                  Meet Nutritionists
+                  Book a Nutritionist
                 </button>
               </div>
             </div>
           ) : (
             <div className="row g-3">
-              {/* Trainers */}
-              {assignedTrainers.map((trainer, idx) => (
-                <div key={trainer.id || idx} className="col-12 col-md-6">
-                  <div className="p-3 rounded-4 h-100 d-flex align-items-center justify-content-between" style={{
-                    background: 'rgba(0, 230, 115, 0.03)',
-                    border: '1px solid rgba(0, 230, 115, 0.15)',
-                  }}>
-                    <div className="d-flex align-items-center gap-3">
-                      <img 
-                        src={trainer.image_url || 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop'} 
-                        alt={trainer.name}
-                        style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0, 230, 115, 0.3)' }}
-                      />
-                      <div>
-                        <h6 className="text-white fw-bold mb-0">{trainer.name}</h6>
-                        <span className="text-success small fw-semibold">Elite Coach</span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => navigate('/trainers')} 
-                      className="btn btn-link text-success p-0 hover-lift"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <ChevronRight size={20} />
-                    </button>
+              {assignedTrainers.map((trainer) => (
+                <div key={`trainer-${trainer.id}`} className="col-6 col-md-4 col-lg-3">
+                  <div
+                    className="p-3 rounded-4 text-center h-100"
+                    style={{
+                      background: 'rgba(255, 122, 0, 0.05)',
+                      border: '1px solid rgba(255, 122, 0, 0.2)'
+                    }}
+                  >
+                    <img
+                      src={trainer.image_url}
+                      alt={trainer.name}
+                      className="mx-auto mb-2"
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid rgba(255, 122, 0, 0.35)'
+                      }}
+                    />
+                    <h6 className="text-white fw-bold mb-0 small">{trainer.name}</h6>
+                    <span className="text-warning small" style={{ fontSize: '0.65rem' }}>Trainer</span>
                   </div>
                 </div>
               ))}
 
-              {/* Nutritionists */}
-              {assignedNutritionists.map((pro, idx) => (
-                <div key={pro.id || idx} className="col-12 col-md-6">
-                  <div className="p-3 rounded-4 h-100 d-flex align-items-center justify-content-between" style={{
-                    background: 'rgba(255, 193, 7, 0.03)',
-                    border: '1px solid rgba(255, 193, 7, 0.15)',
-                  }}>
-                    <div className="d-flex align-items-center gap-3">
-                      <img 
-                        src={pro.image_url || 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1453&auto=format&fit=crop'} 
-                        alt={pro.name}
-                        style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255, 193, 7, 0.3)' }}
-                      />
-                      <div>
-                        <h6 className="text-white fw-bold mb-0">{pro.name}</h6>
-                        <span className="text-warning small fw-semibold">Nutrition Expert</span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => navigate('/nutritionists')} 
-                      className="btn btn-link text-warning p-0 hover-lift"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <ChevronRight size={20} />
-                    </button>
+              {assignedNutritionists.map((pro) => (
+                <div key={`nutritionist-${pro.id}`} className="col-6 col-md-4 col-lg-3">
+                  <div
+                    className="p-3 rounded-4 text-center h-100"
+                    style={{
+                      background: 'rgba(0, 230, 115, 0.05)',
+                      border: '1px solid rgba(0, 230, 115, 0.2)'
+                    }}
+                  >
+                    <img
+                      src={pro.image_url}
+                      alt={pro.name}
+                      className="mx-auto mb-2"
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid rgba(0, 230, 115, 0.35)'
+                      }}
+                    />
+                    <h6 className="text-white fw-bold mb-0 small">{pro.name}</h6>
+                    <span className="text-success small" style={{ fontSize: '0.65rem' }}>Nutritionist</span>
                   </div>
                 </div>
               ))}

@@ -21,6 +21,7 @@ const Machines = lazy(() => import("./assets/pages/Machines"));
 const Dashboard = lazy(() => import("./assets/pages/Dashboard"));
 const AdminManagement = lazy(() => import("./assets/pages/AdminManagement"));
 const SpecialistDashboard = lazy(() => import("./assets/pages/SpecialistDashboard"));
+const SpecialistClientPlans = lazy(() => import("./assets/pages/SpecialistClientPlans"));
 const TrainerPlanEditor = lazy(() => import("./assets/pages/TrainerPlanEditor"));
 const NutritionistPlanEditor = lazy(() => import("./assets/pages/NutritionistPlanEditor"));
 const SpecialistProfile = lazy(() => import("./assets/pages/SpecialistProfile"));
@@ -63,6 +64,7 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/admin/management" element={<AdminManagement />} />
                     <Route path="/specialist/dashboard" element={<SpecialistDashboard />} />
+                    <Route path="/specialist/clients" element={<SpecialistClientPlans />} />
                     <Route path="/specialist/plan/:planId/workout" element={<TrainerPlanEditor />} />
                     <Route path="/specialist/plan/:planId/meals" element={<NutritionistPlanEditor />} />
                     <Route path="/specialist/profile/edit" element={<SpecialistProfile />} />

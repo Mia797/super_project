@@ -3,11 +3,8 @@ import api from './axios';
 
 export const SPECIALIST_BOOKING_TOKENS = 10;
 
-// Get specialist stats and client plans
+// Get specialist dashboard stats (role-specific fields)
 export const getSpecialistDashboard = () => api.get('/specialists/dashboard');
-
-// Get nutrition plans assigned to the logged-in nutritionist that are still in planning
-export const getNutritionPlans = () => api.get('/nutrition/plans');
 
 // Book a trainer (charges SPECIALIST_BOOKING_TOKENS from balance)
 export const bookTrainer = ({ trainer_id, goal, description }) =>
@@ -33,6 +30,12 @@ export const updateSpecialistProfile = (profileData) =>
 export const addExercisesToPlan = (planId, exercises) =>
   api.post('/training/plans/add-exercises', { planId, exercises });
 
-// Add meal splits to a client nutrition plan
-export const addMealsToPlan = (planId, meals) =>
-  api.post('/nutrition/plans/add-meals', { planId, meals });
+// Add meals from the library to a client nutrition plan
+export const addMealsToPlan = (diet_plan_id, meals) =>
+  api.post('/nutrition/plans/add-meals', {
+    diet_plan_id: Number(diet_plan_id),
+    meals: meals.map((m) => ({
+      meal_id: Number(m.meal_id),
+      day_number: Number(m.day_number),
+    })),
+  });

@@ -20,3 +20,24 @@ export const normalizeNutritionPlans = (payload) => {
   if (Array.isArray(payload.data?.plans)) return payload.data.plans;
   return [];
 };
+
+export const normalizeDietMeals = (payload) => {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.meals)) return payload.meals;
+  return Object.keys(payload)
+    .filter((key) => key !== 'success' && key !== 'message' && !Number.isNaN(Number(key)))
+    .map((key) => payload[key]);
+};
+
+export const normalizeUserNutritionPlan = (payload) => {
+  if (!payload) return { plan: null, meals: [] };
+  const plan = payload.plan || payload.diet_plan || null;
+  let meals = [];
+  if (Array.isArray(payload.meals)) {
+    meals = payload.meals;
+  } else if (payload.meals) {
+    meals = normalizeDietMeals(payload.meals);
+  }
+  return { plan, meals };
+};
