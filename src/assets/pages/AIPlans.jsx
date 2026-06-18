@@ -64,19 +64,64 @@ function AIPlans() {
   }
 
   return (
-    <div style={{ padding: '20px', color: 'white', background: '#0a0a0a', minHeight: '100vh' }}>
-      <h1>AI Plans</h1>
-      <p>View your AI-generated fitness and nutrition plans.</p>
+    <div
+    style={{
+      padding: '20px',
+      color: 'white',
+      background: '#0a0a0a',
+      minHeight: '100vh',
+    }}
+  >
+  <h1
+  style={{
+    color: '#ff8c00',
+    fontSize: '3.5rem',
+    fontWeight: '900',
+    textAlign: 'center',
+    textShadow: '0 0 20px rgba(255,140,0,0.6)',
+    marginBottom: '45px',
+    marginTop: '45px',
+  }}
+>
+  AI Plans
+</h1>
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : aiPlans.length === 0 ? (
-        <p>No AI Plans Yet</p>
-      ) : (
-        <div style={{ marginTop: '20px' }}>
-          {aiPlans.map((plan, idx) => {
-            const planKey = plan.id ?? idx;
+<h2
+  style={{
+    color: '#ffffff',
+    fontSize: '1.4rem',
+    fontWeight: '600',
+    textAlign: 'center',
+    letterSpacing: '0.5px',
+    marginBottom: '50px',
+    marginTop: '30px',
 
+  }}
+>
+  View your AI-generated fitness and nutrition plans.
+</h2>
+
+    {loading ? (
+      <p>Loading...</p>
+    ) : aiPlans.length === 0 ? (
+      <p
+        style={{
+          color: '#ff8c00',
+          fontSize: '1.5rem',
+          fontWeight: '700',
+          textAlign: 'center',
+          padding: '20px',
+          border: '2px solid #ff8c00',
+          borderRadius: '12px',
+          backgroundColor: '#1a1a1a',
+        }}
+      >
+        No AI Plans Yet
+      </p>
+    ) : (
+      <div style={{ marginTop: '20px' }}>
+        {aiPlans.map((plan, idx) => {
+          const planKey = plan.id ?? idx;
             return (
               <div
                 key={planKey}
