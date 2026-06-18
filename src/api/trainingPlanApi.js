@@ -11,6 +11,10 @@ export const getTrainingPlans = () => api.get('/training/plans');
 export const getWorkoutExercises = (planId) =>
   api.get(`/training/workout-exercises?plan_id=${planId}`);
 
+// Cancel a training plan (plan owner)
+export const cancelTrainingPlan = (training_plan_id) =>
+  api.post('/training/plans/cancel', { training_plan_id: Number(training_plan_id) });
+
 export const normalizeTrainingPlans = (payload) => {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload;

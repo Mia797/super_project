@@ -11,6 +11,10 @@ export const getNutritionPlans = () => api.get('/nutrition/plans');
 export const getDietMeals = (planId) =>
   api.get(`/nutrition/diet-meals?plan_id=${planId}`);
 
+// Cancel a diet plan (plan owner)
+export const cancelNutritionPlan = (diet_plan_id) =>
+  api.post('/nutrition/plans/cancel', { diet_plan_id: Number(diet_plan_id) });
+
 export const normalizeNutritionPlans = (payload) => {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload;

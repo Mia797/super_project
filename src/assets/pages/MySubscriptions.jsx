@@ -9,18 +9,22 @@ import {
   User,
   Target,
   FileText,
-  Hash
+  Hash,
+  XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { getTrainingPlans, normalizeTrainingPlans } from '../../api/trainingPlanApi';
-import { getNutritionPlans, normalizeNutritionPlans } from '../../api/nutritionPlanApi';
+import { getTrainingPlans, normalizeTrainingPlans, cancelTrainingPlan } from '../../api/trainingPlanApi';
+import { getNutritionPlans, normalizeNutritionPlans, cancelNutritionPlan } from '../../api/nutritionPlanApi';
+import { useAuth } from '../../context/AuthContext';
 
 function MySubscriptions() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [trainingPlans, setTrainingPlans] = useState([]);
   const [nutritionPlans, setNutritionPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState(null);
 
   const fetchPlans = useCallback(async () => {
     setLoading(true);
@@ -66,6 +70,51 @@ function MySubscriptions() {
   };
 
   const hasPlans = trainingPlans.length > 0 || nutritionPlans.length > 0;
+
+  const isRefundableStatus = (status) => {
+    const s = String(status || '').toLowerCase();
+    return s === 'pending assign' || s === 'planning';
+  };
+
+  const getCancelMessage = (plan, type) => {
+    const label = type === 'training' ? 'training plan' : 'diet plan';
+    const refundNote = isRefundableStatus(plan.status)
+      ? ' You will receive a $10.00 refund.'
+      : ' No refund applies for active plans.';
+    return `Cancel this ${label}? This cannot be undone.${refundNote}`;
+  };
+
+  const handleCancelTraining = async (plan) => {
+    if (!window.confirm(getCancelMessage(plan, 'training'))) return;
+
+    setCancellingId(`training-${plan.id}`);
+    try {
+      const res = await cancelTrainingPlan(plan.id);
+      toast.success(res.data?.message || 'Training plan cancelled successfully.');
+      await refreshUser();
+      await fetchPlans();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to cancel training plan.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const handleCancelNutrition = async (plan) => {
+    if (!window.confirm(getCancelMessage(plan, 'nutrition'))) return;
+
+    setCancellingId(`nutrition-${plan.id}`);
+    try {
+      const res = await cancelNutritionPlan(plan.id);
+      toast.success(res.data?.message || 'Diet plan cancelled successfully.');
+      await refreshUser();
+      await fetchPlans();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to cancel diet plan.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const PlanMeta = ({ icon, label, value, accent }) => (
     <div className="col-12 col-sm-6">
@@ -118,19 +167,36 @@ function MySubscriptions() {
         <PlanMeta icon={<Target size={14} className="text-secondary" />} label="Goal" value={plan.goal} />
       </div>
 
-      <button
-        onClick={() => navigate(`/training/${plan.id}`)}
-        className="btn py-2 px-3 small d-flex align-items-center gap-2 hover-lift"
-        style={{
-          borderRadius: '8px',
-          fontSize: '0.8rem',
-          background: 'rgba(255, 122, 0, 0.1)',
-          border: '1px solid rgba(255, 122, 0, 0.4)',
-          color: '#ff7a00'
-        }}
-      >
-        <Dumbbell size={14} /> View Training Plan <ExternalLink size={12} />
-      </button>
+      <div className="d-flex flex-wrap gap-2">
+        <button
+          onClick={() => navigate(`/training/${plan.id}`)}
+          className="btn py-2 px-3 small d-flex align-items-center gap-2 hover-lift"
+          style={{
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            background: 'rgba(255, 122, 0, 0.1)',
+            border: '1px solid rgba(255, 122, 0, 0.4)',
+            color: '#ff7a00'
+          }}
+        >
+          <Dumbbell size={14} /> View Training Plan <ExternalLink size={12} />
+        </button>
+        <button
+          onClick={() => handleCancelTraining(plan)}
+          disabled={cancellingId === `training-${plan.id}`}
+          className="btn py-2 px-3 small d-flex align-items-center gap-2 hover-lift"
+          style={{
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            background: 'rgba(220, 53, 69, 0.08)',
+            border: '1px solid rgba(220, 53, 69, 0.35)',
+            color: '#dc3545'
+          }}
+        >
+          <XCircle size={14} />
+          {cancellingId === `training-${plan.id}` ? 'Cancelling...' : 'Cancel Plan'}
+        </button>
+      </div>
     </motion.div>
   );
 
@@ -173,19 +239,36 @@ function MySubscriptions() {
         <PlanMeta icon={<FileText size={14} className="text-secondary" />} label="Goal" value={plan.goal} />
       </div>
 
-      <button
-        onClick={() => navigate(`/nutrition/${plan.id}`)}
-        className="btn py-2 px-3 small d-flex align-items-center gap-2 hover-lift"
-        style={{
-          borderRadius: '8px',
-          fontSize: '0.8rem',
-          background: 'rgba(0, 230, 115, 0.1)',
-          border: '1px solid rgba(0, 230, 115, 0.4)',
-          color: '#00e673'
-        }}
-      >
-        <Apple size={14} /> View Diet Plan <ExternalLink size={12} />
-      </button>
+      <div className="d-flex flex-wrap gap-2">
+        <button
+          onClick={() => navigate(`/nutrition/${plan.id}`)}
+          className="btn py-2 px-3 small d-flex align-items-center gap-2 hover-lift"
+          style={{
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            background: 'rgba(0, 230, 115, 0.1)',
+            border: '1px solid rgba(0, 230, 115, 0.4)',
+            color: '#00e673'
+          }}
+        >
+          <Apple size={14} /> View Diet Plan <ExternalLink size={12} />
+        </button>
+        <button
+          onClick={() => handleCancelNutrition(plan)}
+          disabled={cancellingId === `nutrition-${plan.id}`}
+          className="btn py-2 px-3 small d-flex align-items-center gap-2 hover-lift"
+          style={{
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            background: 'rgba(220, 53, 69, 0.08)',
+            border: '1px solid rgba(220, 53, 69, 0.35)',
+            color: '#dc3545'
+          }}
+        >
+          <XCircle size={14} />
+          {cancellingId === `nutrition-${plan.id}` ? 'Cancelling...' : 'Cancel Plan'}
+        </button>
+      </div>
     </motion.div>
   );
 
