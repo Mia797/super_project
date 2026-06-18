@@ -535,15 +535,13 @@ function AdminManagement() {
                           <span className="text-secondary small d-block mt-0.5" style={{ fontSize: '0.75rem' }}>Role: <span className="text-warning text-uppercase">{spec.role}</span> | {spec.email}</span>
                         </div>
                         <div className="d-flex align-items-center gap-2">
-                          {spec.role === 'trainer' && (
-                            <button
-                              onClick={() => handleEditSpec(spec)}
-                              className="btn btn-sm btn-outline-warning py-1 px-2.5 fw-bold text-uppercase"
-                              style={{ fontSize: '0.65rem', borderRadius: '6px' }}
-                            >
-                              Edit
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleEditSpec(spec)}
+                            className="btn btn-sm btn-outline-warning py-1 px-2.5 fw-bold text-uppercase"
+                            style={{ fontSize: '0.65rem', borderRadius: '6px' }}
+                          >
+                            Edit
+                          </button>
                           <button onClick={() => handleDeleteSpec(spec)} className="btn btn-link text-danger p-2 hover-lift"><Trash2 size={16} /></button>
                         </div>
                       </div>
@@ -796,7 +794,7 @@ function AdminManagement() {
                         <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">User ID</label>
                         <input
                           type="text"
-                          value={editingSpec.id}
+                          value={resolveSpecialistUserId(editingSpec) ?? ''}
                           disabled
                           className="form-control text-white-50 bg-black bg-opacity-60 border border-secondary border-opacity-10"
                         />
