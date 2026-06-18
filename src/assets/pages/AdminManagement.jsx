@@ -586,15 +586,6 @@ function AdminManagement() {
 
                         <div className="d-flex align-items-center gap-2">
                           <button
-                            className="btn btn-sm btn-outline-warning py-1 px-2.5 fw-bold text-uppercase"
-                            style={{ fontSize: '0.65rem', borderRadius: '6px' }}
-                            onClick={() => {
-                              // open edit modal or map fields
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
                             onClick={() => handleDeleteUser(u.id)}
                             className="btn btn-link text-danger p-2 hover-lift"
                           >
