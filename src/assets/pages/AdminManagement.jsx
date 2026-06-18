@@ -584,9 +584,10 @@ function AdminManagement() {
                           </span>
                         </div>
 
-                        <div className="d-flex gap-2">
+                        <div className="d-flex align-items-center gap-2">
                           <button
-                            className="btn btn-outline-warning btn-sm"
+                            className="btn btn-sm btn-outline-warning py-1 px-2.5 fw-bold text-uppercase"
+                            style={{ fontSize: '0.65rem', borderRadius: '6px' }}
                             onClick={() => {
                               // open edit modal or map fields
                             }}
@@ -594,10 +595,10 @@ function AdminManagement() {
                             Edit
                           </button>
                           <button
-                            className="btn btn-danger btn-sm"
                             onClick={() => handleDeleteUser(u.id)}
+                            className="btn btn-link text-danger p-2 hover-lift"
                           >
-                            Delete
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
