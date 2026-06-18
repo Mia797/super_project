@@ -96,3 +96,31 @@
   background: rgba(255, 122, 0, 0.15);
   color: var(--accent-primary);
 }
+
+.nav-menu-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 16px;
+  transition: color 0.3s ease;
+}
+
+.nav-menu-link:hover,
+.nav-menu-link.active {
+  color: var(--accent-primary) !important;
+}
+
+.nav-menu-link.active {
+  font-weight: 700;
+}
+
+.nav-menu-profile {
+  color: var(--accent-primary) !important;
+}
+
+.nav-mobile-link.active {
+  background: rgba(255, 122, 0, 0.15);
+  color: var(--accent-primary) !important;
+  font-weight: 700;
+}
+

@@ -32,7 +32,7 @@ export const WalletProvider = ({ children }) => {
     try {
       const response = await depositFunds(amount, user);
       if (response.data && response.data.success) {
-        toast.success(`Successfully deposited $${amount}!`);
+        toast.success(`Successfully deposited ${amount} tokens!`);
         await fetchHistory();
         return { success: true };
       }

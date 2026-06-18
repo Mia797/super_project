@@ -18,16 +18,7 @@ function Login() {
     setError('');
     const result = await login(email, password);
     if (result.success) {
-      alert("Login successful! Redirecting...");
-      // Wait for user state to update
-      setTimeout(() => {
-        const storedUser = JSON.parse(window.localStorage.getItem('goldfit_auth_user') || '{}');
-        if (storedUser.role === 'trainer' || storedUser.role === 'nutritionist') {
-          navigate('/specialist/dashboard');
-        } else {
-          navigate('/profile');
-        }
-      }, 100);
+      navigate('/');
     } else {
       setError(result.message);
     }
@@ -38,15 +29,7 @@ function Login() {
     setPassword(userPassword);
     const result = await login(userEmail, userPassword);
     if (result.success) {
-      alert("Login successful! Redirecting...");
-      setTimeout(() => {
-        const storedUser = JSON.parse(window.localStorage.getItem('goldfit_auth_user') || '{}');
-        if (storedUser.role === 'trainer' || storedUser.role === 'nutritionist') {
-          navigate('/specialist/dashboard');
-        } else {
-          navigate('/profile');
-        }
-      }, 100);
+      navigate('/');
     } else {
       setError(result.message);
     }

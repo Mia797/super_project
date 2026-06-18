@@ -308,8 +308,13 @@ app.get('/api/exercises', (req, res) => {
   if (search) {
     const q = search.toLowerCase();
     filtered = filtered.filter(e =>
-      e.name.toLowerCase().includes(q) ||
-      e.description.toLowerCase().includes(q)
+      (e.name && e.name.toLowerCase().includes(q)) ||
+      (e.description && e.description.toLowerCase().includes(q)) ||
+      (e.category && e.category.toLowerCase().includes(q)) ||
+      (e.muscle_name && e.muscle_name.toLowerCase().includes(q)) ||
+      (e.difficulty && e.difficulty.toLowerCase().includes(q)) ||
+      (e.equipment && e.equipment.toLowerCase().includes(q)) ||
+      (e.equipment_name && e.equipment_name.toLowerCase().includes(q))
     );
   }
 
@@ -343,9 +348,11 @@ app.get('/api/meals', (req, res) => {
   if (search) {
     const q = search.toLowerCase();
     filtered = filtered.filter(m =>
-      m.name.toLowerCase().includes(q) ||
-      m.description.toLowerCase().includes(q) ||
-      m.preparation_steps.toLowerCase().includes(q) ||
+      (m.name && m.name.toLowerCase().includes(q)) ||
+      (m.description && m.description.toLowerCase().includes(q)) ||
+      (m.preparation_steps && m.preparation_steps.toLowerCase().includes(q)) ||
+      (m.goal && m.goal.toLowerCase().includes(q)) ||
+      (m.meal_type && m.meal_type.toLowerCase().includes(q)) ||
       (m.ingredients && m.ingredients.some(ing => ing.toLowerCase().includes(q)))
     );
   }

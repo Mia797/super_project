@@ -8,17 +8,13 @@ function Meals() {
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [goal, setGoal] = useState('All');
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [checkedIngredients, setCheckedIngredients] = useState({});
-
-  const goals = ['All', 'Bulking', 'Cutting', 'Maintenance'];
 
   const fetchMeals = async () => {
     setLoading(true);
     try {
-      const goalFilter = goal === 'All' ? '' : goal;
-      const res = await getMeals(search, goalFilter);
+      const res = await getMeals(search, '');
       if (res.data?.success) {
         setMeals(res.data.meals);
       }
@@ -36,7 +32,7 @@ function Meals() {
     }, 300);
 
     return () => clearTimeout(delayDebounce);
-  }, [search, goal]);
+  }, [search]);
 
   // Reset ingredients checklist when selected meal changes
   useEffect(() => {
@@ -87,13 +83,13 @@ function Meals() {
         }}>
           <div className="row g-4 align-items-center">
             {/* Search */}
-            <div className="col-12 col-md-6">
+            <div className="col-12">
               <span className="text-secondary small text-uppercase fw-bold d-block mb-2" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>Search Recipes</span>
               <div className="position-relative">
                 <Search className="position-absolute top-50 translate-middle-y ms-3 text-secondary" size={18} />
                 <input
                   type="text"
-                  placeholder="Beef, Oats, Chicken, Avocado..."
+                  placeholder="Beef, Oats, Chicken, Avocado, Bulking, Cutting, Oats..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-100 py-3 ps-5 pe-4 rounded-3 text-white border-0"
@@ -113,30 +109,6 @@ function Meals() {
                     e.target.style.boxShadow = 'none';
                   }}
                 />
-              </div>
-            </div>
-
-            {/* Goal Filter */}
-            <div className="col-12 col-md-6">
-              <span className="text-secondary small text-uppercase fw-bold d-block mb-2" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>Fitness Target Goal</span>
-              <div className="d-flex flex-wrap gap-2">
-                {goals.map((g) => (
-                  <button
-                    key={g}
-                    onClick={() => setGoal(g)}
-                    className="btn px-3 py-2 fw-bold text-uppercase"
-                    style={{
-                      borderRadius: '8px',
-                      fontSize: '0.7rem',
-                      background: goal === g ? 'linear-gradient(135deg, #ff7a00, #ff4400)' : 'rgba(255,255,255,0.03)',
-                      color: goal === g ? '#000' : '#888',
-                      border: goal === g ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {g}
-                  </button>
-                ))}
               </div>
             </div>
           </div>

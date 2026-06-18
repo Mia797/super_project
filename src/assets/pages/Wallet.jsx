@@ -78,7 +78,7 @@ function Wallet() {
                   Available Balance
                 </span>
                 <h2 className="display-4 fw-black text-white m-0" style={{ fontWeight: 900 }}>
-                  {parseFloat(balance).toFixed(0)} 🪙 Tokens
+                  {parseFloat(balance).toFixed(0)}💰 Tokens
                 </h2>
               </div>
               <div className="d-flex align-items-center gap-2 text-secondary small mt-4 pt-3 border-top border-secondary border-opacity-10">
@@ -108,7 +108,7 @@ function Wallet() {
               </span>
               <form onSubmit={handleDepositSubmit} className="d-flex flex-column gap-3">
                 <div className="input-group">
-                  <span className="input-group-text text-secondary bg-black bg-opacity-40 border-secondary border-opacity-25 fw-bold">$</span>
+                  <span className="input-group-text text-secondary bg-black bg-opacity-40 border-secondary border-opacity-25 fw-bold">Tokens</span>
                   <input
                     type="number"
                     value={depositAmount}
@@ -195,7 +195,7 @@ function Wallet() {
                         </span>
                       </td>
                       <td className={`text-end py-3 px-4 fw-black ${isDebit ? 'text-danger' : 'text-success'}`} style={{ fontSize: '1rem' }}>
-                        {isDebit ? '-' : '+'}{parseFloat(tx.amount).toFixed(0)} 🪙 Tokens
+                        {isDebit ? '-' : '+'}{parseFloat(tx.amount).toFixed(0)} 💰 Tokens
                       </td>
                     </tr>
                   );

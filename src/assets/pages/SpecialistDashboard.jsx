@@ -21,7 +21,7 @@ import { toast } from 'react-toastify';
 
 const BOOKING_RATE = 10;
 
-/** Deterministic per-plan earnings ($10–$25) so totals stay stable per plan id */
+/** Deterministic per-plan earnings (10–25 tokens) so totals stay stable per plan id */
 function estimateEarningsFromPlans(plans = []) {
   return plans.reduce((sum, plan) => {
     const seed = Number(plan.id) || 1;
@@ -259,7 +259,7 @@ function SpecialistDashboard() {
                     >
                       <DollarSign size={28} style={{ color: '#28a745' }} className="mb-3" />
                       <h4 className="text-secondary small mb-1 text-uppercase fw-bold" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>Total Earnings</h4>
-                      <h2 className="text-white fw-black mb-0 fs-3">${trainerEarnings.toFixed(2)}</h2>
+                      <h2 className="text-white fw-black mb-0 fs-3">{trainerEarnings.toFixed(0)} Tokens</h2>
                     </motion.div>
                   </div>
                   <div className="col-12 col-md-4">

@@ -48,79 +48,76 @@ function Navbar() {
           {/* Menu for Desktop */}
           <ul className="nav-menu">
             <li>
-              <Link to="/" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Home</Link>
+              <Link to="/" className={`nav-menu-link ${location.pathname === '/' ? 'active' : ''}`}>Home</Link>
             </li>
 
             {user?.role === 'admin' && (
               <>
                 <li>
-                  <Link to="/dashboard" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Dashboard</Link>
-                </li>
-                <li>
-                  <Link to="/admin/management" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Management</Link>
+                  <Link to="/admin/management" className={`nav-menu-link ${location.pathname === '/admin/management' ? 'active' : ''}`}>Management</Link>
                 </li>
               </>
             )}
 
             {(user?.role === 'trainer' || user?.role === 'nutritionist') && (
               <li>
-                <Link to="/specialist/dashboard" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Specialist Dashboard</Link>
+                <Link to="/specialist/dashboard" className={`nav-menu-link ${location.pathname === '/specialist/dashboard' ? 'active' : ''}`}>Specialist Dashboard</Link>
               </li>
             )}
 
             <li>
-              <Link to="/trainers" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Trainers</Link>
+              <Link to="/trainers" className={`nav-menu-link ${location.pathname === '/trainers' ? 'active' : ''}`}>Trainers</Link>
             </li>
 
             <li>
-              <Link to="/machines" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Machines</Link>
+              <Link to="/machines" className={`nav-menu-link ${location.pathname === '/machines' ? 'active' : ''}`}>Machines</Link>
             </li>
 
             <li>
-              <Link to="/nutritionists" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Nutrition</Link>
+              <Link to="/nutritionists" className={`nav-menu-link ${location.pathname === '/nutritionists' ? 'active' : ''}`}>Nutrition</Link>
             </li>
 
             {user ? (
               <>
                 <li>
-                  <Link to="/exercises" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Exercises</Link>
+                  <Link to="/exercises" className={`nav-menu-link ${location.pathname === '/exercises' ? 'active' : ''}`}>Exercises</Link>
                 </li>
                 <li>
-                  <Link to="/meals" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Meals</Link>
+                  <Link to="/meals" className={`nav-menu-link ${location.pathname === '/meals' ? 'active' : ''}`}>Meals</Link>
                 </li>
                 {user && user.role === 'user' && (
                   <>
                     <li>
-                      <Link to="/sessions" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Sessions</Link>
+                      <Link to="/sessions" className={`nav-menu-link ${location.pathname === '/sessions' ? 'active' : ''}`}>Sessions</Link>
                     </li>
                     <li>
-                      <Link to="/my-sessions" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>My Sessions</Link>
+                      <Link to="/my-sessions" className={`nav-menu-link ${location.pathname === '/my-sessions' ? 'active' : ''}`}>My Sessions</Link>
                     </li>
                   </>
                 )}
                 <li>
-                  <Link to="/subscriptions" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Packages</Link>
+                  <Link to="/subscriptions" className={`nav-menu-link ${location.pathname === '/subscriptions' ? 'active' : ''}`}>Packages</Link>
                 </li>
                 <li>
-                  <Link to="/ai-plans" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>AI Plans</Link>
+                  <Link to="/ai-plans" className={`nav-menu-link ${location.pathname === '/ai-plans' ? 'active' : ''}`}>AI Plans</Link>
                 </li>
                 <li>
-                  <Link to="/wallet" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Wallet</Link>
+                  <Link to="/wallet" className={`nav-menu-link ${location.pathname === '/wallet' ? 'active' : ''}`}>Wallet</Link>
                 </li>
                 <li>
-                  <Link to="/profile" style={profileLinkStyle}>Profile</Link>
+                  <Link to="/profile" className={`nav-menu-link nav-menu-profile ${location.pathname === '/profile' ? 'active' : ''}`}>Profile</Link>
                 </li>
               </>
             ) : (
               <>
                 <li>
-                  <Link to="/login" style={linkStyle} onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-primary)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-primary)'}>Login</Link>
+                  <Link to="/login" className={`nav-menu-link ${location.pathname === '/login' ? 'active' : ''}`}>Login</Link>
                 </li>
                 <li>
                   <Link
                     to="/register"
+                    className="nav-menu-link"
                     style={{
-                      ...linkStyle,
                       background: "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))",
                       color: "black",
                       fontWeight: "bold",
@@ -145,41 +142,40 @@ function Navbar() {
       {/* Mobile Menu Drawer Overlay */}
       {isOpen && (
         <div className="nav-mobile-overlay">
-          <Link to="/" className="nav-mobile-link">Home</Link>
+          <Link to="/" className={`nav-mobile-link ${location.pathname === '/' ? 'active' : ''}`}>Home</Link>
           
           {user?.role === 'admin' && (
             <>
-              <Link to="/dashboard" className="nav-mobile-link">Dashboard</Link>
-              <Link to="/admin/management" className="nav-mobile-link">Management</Link>
+              <Link to="/admin/management" className={`nav-mobile-link ${location.pathname === '/admin/management' ? 'active' : ''}`}>Management</Link>
             </>
           )}
 
           {(user?.role === 'trainer' || user?.role === 'nutritionist') && (
-            <Link to="/specialist/dashboard" className="nav-mobile-link">Specialist Dashboard</Link>
+            <Link to="/specialist/dashboard" className={`nav-mobile-link ${location.pathname === '/specialist/dashboard' ? 'active' : ''}`}>Specialist Dashboard</Link>
           )}
 
-          <Link to="/trainers" className="nav-mobile-link">Coaches</Link>
-          <Link to="/machines" className="nav-mobile-link">Equipment Arsenal</Link>
-          <Link to="/nutritionists" className="nav-mobile-link">Nutritionists</Link>
+          <Link to="/trainers" className={`nav-mobile-link ${location.pathname === '/trainers' ? 'active' : ''}`}>Coaches</Link>
+          <Link to="/machines" className={`nav-mobile-link ${location.pathname === '/machines' ? 'active' : ''}`}>Equipment Arsenal</Link>
+          <Link to="/nutritionists" className={`nav-mobile-link ${location.pathname === '/nutritionists' ? 'active' : ''}`}>Nutritionists</Link>
 
           {user ? (
             <>
-              <Link to="/exercises" className="nav-mobile-link">Exercise Library</Link>
-              <Link to="/meals" className="nav-mobile-link">Nutrition Catalog</Link>
+              <Link to="/exercises" className={`nav-mobile-link ${location.pathname === '/exercises' ? 'active' : ''}`}>Exercise Library</Link>
+              <Link to="/meals" className={`nav-mobile-link ${location.pathname === '/meals' ? 'active' : ''}`}>Nutrition Catalog</Link>
               {user.role === 'user' && (
                 <>
-                  <Link to="/sessions" className="nav-mobile-link">Sessions</Link>
-                  <Link to="/my-sessions" className="nav-mobile-link">My Sessions</Link>
+                  <Link to="/sessions" className={`nav-mobile-link ${location.pathname === '/sessions' ? 'active' : ''}`}>Sessions</Link>
+                  <Link to="/my-sessions" className={`nav-mobile-link ${location.pathname === '/my-sessions' ? 'active' : ''}`}>My Sessions</Link>
                 </>
               )}
-              <Link to="/subscriptions" className="nav-mobile-link">Packages</Link>
-              <Link to="/ai-plans" className="nav-mobile-link">AI Plans</Link>
-              <Link to="/wallet" className="nav-mobile-link">Wallet</Link>
-              <Link to="/profile" className="nav-mobile-link" style={{ color: "var(--accent-primary)", fontWeight: "bold" }}>Profile</Link>
+              <Link to="/subscriptions" className={`nav-mobile-link ${location.pathname === '/subscriptions' ? 'active' : ''}`}>Packages</Link>
+              <Link to="/ai-plans" className={`nav-mobile-link ${location.pathname === '/ai-plans' ? 'active' : ''}`}>AI Plans</Link>
+              <Link to="/wallet" className={`nav-mobile-link ${location.pathname === '/wallet' ? 'active' : ''}`}>Wallet</Link>
+              <Link to="/profile" className={`nav-mobile-link nav-menu-profile ${location.pathname === '/profile' ? 'active' : ''}`}>Profile</Link>
             </>
           ) : (
             <>
-              <Link to="/login" className="nav-mobile-link">Login</Link>
+              <Link to="/login" className={`nav-mobile-link ${location.pathname === '/login' ? 'active' : ''}`}>Login</Link>
               <Link
                 to="/register"
                 className="nav-mobile-link"

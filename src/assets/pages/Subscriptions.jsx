@@ -254,13 +254,13 @@ function Subscriptions() {
                   <Form.Select
                     value={goal}
                     onChange={(e) => setGoal(e.target.value)}
-                    className="form-select-dark"
+                    className="form-select-dark form-control-dark"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 122, 0, 0.3)',
+                      background: 'rgba(20, 20, 20, 0.6)',
+                      border: '1px solid rgba(255, 122, 0, 0.15)',
                       color: '#fff',
-                      borderRadius: '8px',
-                      padding: '10px 12px'
+                      borderRadius: '10px',
+                      padding: '10px 14px'
                     }}
                   >
                     <option value="">Select a goal...</option>

@@ -388,7 +388,7 @@ function AdminManagement() {
         {/* Header */}
         <div className="d-flex align-items-center gap-3 mb-5 border-bottom border-secondary border-opacity-15 pb-4">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/')}
             className="btn btn-link text-white p-0 d-flex align-items-center justify-content-center"
             style={{ textDecoration: 'none' }}
           >
@@ -465,7 +465,7 @@ function AdminManagement() {
                       <div key={eq.id || idx} className="p-3 d-flex justify-content-between align-items-center" style={{ background: 'rgba(25,25,25,0.4)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
                         <div>
                           <strong className="text-white d-block">{eq.name}</strong>
-                          <span className="text-secondary small d-block mt-0.5" style={{ fontSize: '0.75rem' }}>Status: <span className="text-warning">{eq.status}</span> | ${Number(eq.booking_price || 0).toFixed(2)} / hr</span>
+                          <span className="text-secondary small d-block mt-0.5" style={{ fontSize: '0.75rem' }}>Status: <span className="text-warning">{eq.status}</span> | {Number(eq.booking_price || 0).toFixed(0)} Tokens / hr</span>
                         </div>
                         <div className="d-flex align-items-center gap-2">
                           <button
@@ -491,7 +491,7 @@ function AdminManagement() {
                       <div key={sub.id || idx} className="p-3 d-flex justify-content-between align-items-center" style={{ background: 'rgba(25,25,25,0.4)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
                         <div>
                           <strong className="text-white d-block">{sub.name}</strong>
-                          <span className="text-secondary small d-block mt-0.5" style={{ fontSize: '0.75rem' }}>Price: ${sub.price} | {sub.duration_days || '30'} Days</span>
+                          <span className="text-secondary small d-block mt-0.5" style={{ fontSize: '0.75rem' }}>Price: {sub.price} Tokens | {sub.duration_days || '30'} Days</span>
                         </div>
                         <div className="d-flex align-items-center gap-2">
                           <button
@@ -722,7 +722,7 @@ function AdminManagement() {
                   </div>
                   <div className="row g-2">
                     <div className="col-6">
-                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Price ($)</label>
+                      <label className="text-secondary small fw-bold text-uppercase mb-2 d-block">Price (Tokens)</label>
                       <input
                         type="number"
                         step="0.01"

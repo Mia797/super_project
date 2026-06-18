@@ -8,19 +8,12 @@ function Exercises() {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('All');
-  const [difficulty, setDifficulty] = useState('All');
   const [selectedExercise, setSelectedExercise] = useState(null);
-
-  const categories = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
-  const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
   const fetchExercises = async () => {
     setLoading(true);
     try {
-      const catFilter = category === 'All' ? '' : category;
-      const diffFilter = difficulty === 'All' ? '' : difficulty;
-      const res = await getExercises(search, catFilter, diffFilter);
+      const res = await getExercises(search, '', '');
       if (res.data?.success) {
         setExercises(res.data.exercises);
       }
@@ -38,7 +31,7 @@ function Exercises() {
     }, 300);
 
     return () => clearTimeout(delayDebounce);
-  }, [search, category, difficulty]);
+  }, [search]);
 
   const getDifficultyColor = (diff) => {
     const d = (diff || 'Beginner').toLowerCase();
@@ -75,13 +68,13 @@ function Exercises() {
         }}>
           <div className="row g-4 align-items-center">
             {/* Search */}
-            <div className="col-12 col-md-6">
+            <div className="col-12">
               <span className="text-secondary small text-uppercase fw-bold d-block mb-2" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>Search Movement</span>
               <div className="position-relative">
                 <Search className="position-absolute top-50 translate-middle-y ms-3 text-secondary" size={18} />
                 <input
                   type="text"
-                  placeholder="Bench Press, Squats, Pull-ups..."
+                  placeholder="Bench Press, Squats, Pull-ups, Chest, Intermediate, Barbell..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-100 py-3 ps-5 pe-4 rounded-3 text-white border-0"
@@ -102,56 +95,6 @@ function Exercises() {
                   }}
                 />
               </div>
-            </div>
-
-            {/* Difficulty Filter */}
-            <div className="col-12 col-md-6">
-              <span className="text-secondary small text-uppercase fw-bold d-block mb-2" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>Difficulty Level</span>
-              <div className="d-flex flex-wrap gap-2">
-                {difficulties.map((diff) => (
-                  <button
-                    key={diff}
-                    onClick={() => setDifficulty(diff)}
-                    className="btn px-3 py-2 fw-bold text-uppercase"
-                    style={{
-                      borderRadius: '8px',
-                      fontSize: '0.7rem',
-                      background: difficulty === diff ? 'linear-gradient(135deg, #ff7a00, #ff4400)' : 'rgba(255,255,255,0.03)',
-                      color: difficulty === diff ? '#000' : '#888',
-                      border: difficulty === diff ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {diff}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Category Selector Tabs */}
-          <div className="mt-4 pt-3 border-top border-secondary border-opacity-10">
-            <span className="text-secondary small text-uppercase fw-bold d-block mb-2" style={{ fontSize: '0.65rem', letterSpacing: '1px' }}>Target Muscle Group</span>
-            <div className="d-flex gap-2 overflow-auto pb-2 scrollbar-hidden" style={{ whiteSpace: 'nowrap' }}>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className="btn px-4 py-2 fw-bold text-uppercase hover-lift"
-                  style={{
-                    borderRadius: '20px',
-                    fontSize: '0.72rem',
-                    background: category === cat 
-                      ? 'rgba(255, 122, 0, 0.12)' 
-                      : 'transparent',
-                    color: category === cat ? '#ff7a00' : '#888',
-                    border: `1px solid ${category === cat ? '#ff7a00' : 'rgba(255,255,255,0.06)'}`,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {cat}
-                </button>
-              ))}
             </div>
           </div>
         </div>

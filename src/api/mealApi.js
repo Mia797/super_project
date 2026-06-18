@@ -192,17 +192,21 @@ export const getMeals = async (search = '', goal = '') => {
 
     const res = await api.get(`/meals?${params.toString()}`);
     
-    // Normalize response: if the response itself is an object with numeric keys, convert to an array.
+    if (!res.data || typeof res.data !== 'object') {
+      throw new Error('Invalid response data');
+    }
+
     let mealsList = [];
-    if (res.data) {
-      if (Array.isArray(res.data.meals)) {
-        mealsList = res.data.meals;
-      } else if (Array.isArray(res.data)) {
-        mealsList = res.data;
+    if (Array.isArray(res.data.meals)) {
+      mealsList = res.data.meals;
+    } else if (Array.isArray(res.data)) {
+      mealsList = res.data;
+    } else {
+      const keys = Object.keys(res.data).filter(key => !isNaN(key));
+      if (keys.length > 0) {
+        mealsList = keys.map(key => res.data[key]);
       } else {
-        mealsList = Object.keys(res.data)
-          .filter(key => !isNaN(key))
-          .map(key => res.data[key]);
+        throw new Error('No meals found in response');
       }
     }
     
@@ -220,9 +224,11 @@ export const getMeals = async (search = '', goal = '') => {
     if (search) {
       const q = search.toLowerCase();
       filtered = filtered.filter(m => 
-        m.name.toLowerCase().includes(q) || 
-        m.description.toLowerCase().includes(q) ||
-        m.ingredients.some(i => i.toLowerCase().includes(q))
+        (m.name && m.name.toLowerCase().includes(q)) || 
+        (m.description && m.description.toLowerCase().includes(q)) ||
+        (m.goal && m.goal.toLowerCase().includes(q)) ||
+        (m.meal_type && m.meal_type.toLowerCase().includes(q)) ||
+        (m.ingredients && m.ingredients.some(i => i.toLowerCase().includes(q)))
       );
     }
     

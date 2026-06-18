@@ -13,14 +13,14 @@ function Profile() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const handleFundWallet = async () => {
-    const amount = prompt("Enter amount to fund ($):", "50");
+    const amount = prompt("Enter amount of tokens to fund:", "50");
     if (!amount || isNaN(amount)) return;
     
     setActionLoading(true);
     try {
       const response = await axios.post('/api/wallet/fund', { amount: parseFloat(amount) });
       if (response.data.success) {
-        alert(`Successfully added $${amount} to your wallet!`);
+        alert(`Successfully added ${amount} tokens to your wallet!`);
         refreshUser(); // Update balance in UI
       }
     } catch (e) {
@@ -144,7 +144,7 @@ function Profile() {
             <div>
               <p className="profile-detail-label">Wallet Balance</p>
               <div className="d-flex align-items-center gap-2">
-                <p className="profile-detail-value mb-0">${parseFloat(user.balance || 0).toFixed(2)}</p>
+                <p className="profile-detail-value mb-0">{parseFloat(user.balance || 0).toFixed(0)} Tokens</p>
                 <button 
                   onClick={() => navigate('/wallet')} 
                   className="btn-fund-small"

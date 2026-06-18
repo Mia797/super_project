@@ -96,7 +96,7 @@ function Dashboard() {
 
   // Build metrics mapping
   const stats = [
-    { title: 'Gross Revenue', value: `$${parseFloat(dashboardData?.revenue || 0).toFixed(2)}`, icon: Landmark, color: 'var(--accent-primary)' },
+    { title: 'Gross Revenue', value: `${parseFloat(dashboardData?.revenue || 0).toFixed(0)} Tokens`, icon: Landmark, color: 'var(--accent-primary)' },
     { title: 'Active Plans', value: dashboardData?.active_subscriptions || 0, icon: Activity, color: 'var(--accent-secondary)' },
     { title: 'Equipment Booked', value: `${dashboardData?.equipment_utilization || 0}%`, icon: Users, color: 'var(--accent-primary)' },
     { title: 'Ledger Logs', value: dashboardData?.transactions?.length || 0, icon: Package, color: 'var(--accent-secondary)' }
@@ -285,7 +285,7 @@ function Dashboard() {
                           </span>
                         </td>
                         <td className={`text-end py-3 px-4 fw-black ${tx.type === 'debit' || tx.type === 'purchase' ? 'text-danger' : 'text-success'}`}>
-                          {tx.type === 'debit' || tx.type === 'purchase' ? '-' : '+'}${parseFloat(tx.amount).toFixed(2)}
+                          {tx.type === 'debit' || tx.type === 'purchase' ? '-' : '+'}{parseFloat(tx.amount).toFixed(0)} Tokens
                         </td>
                       </tr>
                     ))}
